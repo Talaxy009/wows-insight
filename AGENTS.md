@@ -198,6 +198,13 @@ xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight \
 - 产物是 `WoWsInsight-<version>.ipa`（`Payload/WoWsInsight.app`），同时上传成 Actions artifact；
   IPA **不签名**（`CODE_SIGNING_ALLOWED=NO`），使用者需要自己用 AltStore / Sideloadly / Xcode 重签。
 
+> **重签名必须让描述文件的 App ID 等于 `PRODUCT_BUNDLE_IDENTIFIER`。** 重签工具会用描述文件里的
+> `Entitlements` 覆盖整个 App（CI 产物本身一个 entitlement 都没有），而 `application-identifier`
+> 必须是 `<TeamID>.<BundleID>`。用别的 App ID 的 profile 签出来的 App 能启动、界面正常，但
+> 文档选择器发出的沙盒扩展落不到 App 上——`.fileImporter` 会拿不到可读的 URL（表现为「选了文件
+> 没反应」），iCloud Drive 的文件也会卡在同步。检查方法：`codesign -d --entitlements :- Payload/WoWsInsight.app`
+> 里 `application-identifier` 的后缀要等于 `CFBundleIdentifier`。
+
 > 仓库需要在 Settings → Actions → General → Workflow permissions 里允许
 > **Read and write permissions**，否则 `gh release create` 会因 `GITHUB_TOKEN` 没有写权限而失败。
 
