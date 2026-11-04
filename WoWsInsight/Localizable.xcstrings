@@ -3601,6 +3601,42 @@
         }
       }
     },
+    "search.import.failed.picker" : {
+      "comment" : "Alert body when the document picker could not hand the app the chosen file. %@ is the system error description.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not open the selected file: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択したファイルを開けませんでした: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택한 파일을 열 수 없습니다: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开所选文件：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法開啟所選檔案：%@"
+          }
+        }
+      }
+    },
     "search.import.failed.title" : {
       "comment" : "Alert title when the chosen file cannot be read as a favorites export.",
       "extractionState" : "manual",

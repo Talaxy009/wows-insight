@@ -76,6 +76,12 @@ enum L10n {
         static var importFailedTitle: String { L10n.text("search.import.failed.title") }
         static var importFailedMessage: String { L10n.text("search.import.failed.message") }
 
+        /// Alert body when the document picker itself fails; `%@` is the
+        /// system error, kept visible so the reason is not hidden.
+        static func importFailedPickerMessage(_ reason: String) -> String {
+            L10n.format("search.import.failed.picker", reason)
+        }
+
         static func importSummary(added: Int, skipped: Int) -> String {
             L10n.format("search.import.summary", added, skipped)
         }

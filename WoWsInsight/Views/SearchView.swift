@@ -242,7 +242,18 @@ struct SearchView: View {
     }
 
     private func importFavorites(_ result: Result<URL, any Error>) {
-        guard case .success(let url) = result else { return }
+        let url: URL
+        switch result {
+        case .success(let picked):
+            url = picked
+        case .failure(let error):
+            // Swallowing this used to make a rejected file look like a dead button.
+            importAlert = ImportAlert(
+                title: L10n.Search.importFailedTitle,
+                message: L10n.Search.importFailedPickerMessage(error.localizedDescription)
+            )
+            return
+        }
 
         let isScoped = url.startAccessingSecurityScopedResource()
         defer {
