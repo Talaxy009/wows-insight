@@ -26,6 +26,9 @@ App 不直接调用 Wargaming API，所有数据来自社区的 Yuyuko API（`ht
 ## 工程结构
 
 ```txt
+.github/
+└── workflows/release.yml   // 手动触发：打包未签名 IPA 并发布 Release
+
 WoWsInsight/
 ├── WoWsInsight.xcodeproj
 │   └── xcshareddata/xcschemes/WoWsInsight.xcscheme
@@ -156,7 +159,8 @@ rating = 700 × nDmg + 300 × nFrags + 150 × nWins   // 0 ~ 9999
 
 ## 构建与验证
 
-工程没有单元测试 target，也没有 CI，验证方式是编译；需要看界面时再手动走一遍主要流程。
+工程没有单元测试 target，验证方式是编译；需要看界面时再手动走一遍主要流程。
+CI 只有一个 Release 工作流，不跑测试，只负责编译打包。
 
 > 功能变更后默认只做类型检查和 `xcodebuild` 构建。**如需启动模拟器（`simctl boot` /
 > `install` / `launch`、截图等）验证，先征求用户同意**，不要自行开启。
@@ -177,6 +181,22 @@ xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight \
 
 > 本机的 DSH 文件沙盒会阻止 Xcode 的 Swift 宏插件子进程；命令行构建时加了
 > `OTHER_SWIFT_FLAGS='-Xfrontend -disable-sandbox'`。正常用 Xcode IDE 构建不需要这个参数。
+
+## 发布
+
+`.github/workflows/release.yml` 是**手动触发**的（Actions → Release → Run workflow），
+归档、打包成未签名 IPA，并在 GitHub Releases 里建标签和 Release。
+
+- `version` 输入就是发布版本号（可带 `v` 前缀），例如 `1.0.1` → 标签 `v1.0.1`；
+  同时用 `MARKETING_VERSION=1.0.1` 覆盖工程里的版本号，`CURRENT_PROJECT_VERSION` 用 run number。
+- `version` 留空时用工程的 `MARKETING_VERSION`；标签已存在会直接报错，需要换一个版本号。
+- Release 说明由「如何安装」+ GitHub 自动生成的变更日志（`--generate-notes`）组成，
+  所以 checkout 用了 `fetch-depth: 0`。
+- 产物是 `WoWsInsight-<version>.ipa`（`Payload/WoWsInsight.app`），同时上传成 Actions artifact；
+  IPA **不签名**（`CODE_SIGNING_ALLOWED=NO`），使用者需要自己用 AltStore / Sideloadly / Xcode 重签。
+
+> 仓库需要在 Settings → Actions → General → Workflow permissions 里允许
+> **Read and write permissions**，否则 `gh release create` 会因 `GITHUB_TOKEN` 没有写权限而失败。
 
 ## 后续可扩展方向
 

@@ -34,6 +34,7 @@
 
 - 需要 iOS 18.0+ 的设备或模拟器；源码需要用 Xcode 16 或更新版本自行构建。
 - 在 Target → Signing & Capabilities 里选择自己的 Team，按需修改 Bundle Identifier 后运行。
+- 也可以直接从 [Releases](https://github.com/Talaxy009/wows-insight/releases) 下载 `.ipa`，用自己的证书重新签名后安装（Release 里的 IPA 未签名）。
 
 ## 个人评分怎么看
 

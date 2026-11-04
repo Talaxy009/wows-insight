@@ -1,0 +1,149 @@
+name: Release
+
+# 手动触发：打包未签名 IPA 并发布 GitHub Release。
+# 版本号取输入的 version；留空时使用工程的 MARKETING_VERSION。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（如 1.0.1，可带 v 前缀）。留空则使用工程的 MARKETING_VERSION'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build IPA and release
+    # 工程使用 Xcode 16 的文件夹同步分组，必须用 Xcode 16+ 打开。
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # --generate-notes 需要完整历史和标签
+          fetch-depth: 0
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          version="${INPUT_VERSION:-}"
+          version="${version//[[:space:]]/}"
+          version="${version#v}"
+
+          if [[ -z "${version}" ]]; then
+            version="$(sed -nE 's/.*MARKETING_VERSION = ([^;]+);.*/\1/p' \
+              WoWsInsight.xcodeproj/project.pbxproj | sed -n '1p' | tr -d '[:space:]')"
+            echo "未输入版本号，使用工程的 MARKETING_VERSION=${version}"
+          fi
+
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "版本号格式不合法：${version}（应为 1.0.1 这样的形式）" >&2
+            exit 1
+          fi
+
+          tag="v${version}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "标签 ${tag} 已存在，请换一个版本号" >&2
+            exit 1
+          fi
+
+          {
+            echo "version=${version}"
+            echo "tag=${tag}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Release ${tag}"
+            echo ""
+            echo "- 版本：\`${version}\`"
+            echo "- 提交：\`${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project WoWsInsight.xcodeproj \
+            -scheme WoWsInsight \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/WoWsInsight.xcarchive \
+            MARKETING_VERSION="${VERSION}" \
+            CURRENT_PROJECT_VERSION="${BUILD_NUMBER}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -quiet
+
+      - name: Package IPA
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          app="build/WoWsInsight.xcarchive/Products/Applications/WoWsInsight.app"
+          if [[ ! -d "${app}" ]]; then
+            echo "找不到归档产物：${app}" >&2
+            find build/WoWsInsight.xcarchive/Products -maxdepth 3 >&2
+            exit 1
+          fi
+
+          # IPA 就是「Payload/XXX.app」的 zip 包
+          mkdir -p build/Payload
+          cp -R "${app}" build/Payload/
+          find build/Payload -name '.DS_Store' -delete
+
+          cd build
+          zip -qry "WoWsInsight-${VERSION}.ipa" Payload
+          rm -rf Payload
+
+          unzip -l "WoWsInsight-${VERSION}.ipa" | sed -n '1,20p'
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: WoWsInsight-${{ steps.version.outputs.version }}
+          path: build/*.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          notes_file="$(mktemp)"
+          cat > "${notes_file}" <<'EOF'
+          ### 安装
+
+          Release 里的 IPA 未签名，需要用自己的证书重新签名后安装。
+          EOF
+
+          gh release create "${TAG}" "build/WoWsInsight-${VERSION}.ipa" \
+            --target "${GITHUB_SHA}" \
+            --title "WoWs Insight ${VERSION}" \
+            --notes-file "${notes_file}" \
+            --generate-notes
