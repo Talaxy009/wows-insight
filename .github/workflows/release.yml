@@ -21,8 +21,10 @@ concurrency:
 jobs:
   release:
     name: Build IPA and release
-    # 工程使用 Xcode 16 的文件夹同步分组，必须用 Xcode 16+ 打开。
-    runs-on: macos-15
+    # 需要带 iOS 27 SDK 的 Xcode：用旧 SDK 构建的包在 iOS 26+ 上会跑兼容外观，
+    # 界面和用 Xcode 27 本地构建出来的不一致。xcode-27 镜像目前是 preview 标签，
+    # 将来 GA 后再改成 macos-27。
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7

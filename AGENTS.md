@@ -187,6 +187,9 @@ xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight \
 `.github/workflows/release.yml` 是**手动触发**的（Actions → Release → Run workflow），
 归档、打包成未签名 IPA，并在 GitHub Releases 里建标签和 Release。
 
+- 跑在 `xcode-27` 镜像上，用 Xcode 27 / iOS 27 SDK 构建。**不要退回旧镜像**：用 iOS 18 SDK
+  构建的包在 iOS 26+ 上会走兼容外观，界面和本地用 Xcode 27 构建的不一致（`xcode-27`
+  目前是 preview 标签，GA 后换成 `macos-27`）。
 - `version` 输入就是发布版本号（可带 `v` 前缀），例如 `1.0.1` → 标签 `v1.0.1`；
   同时用 `MARKETING_VERSION=1.0.1` 覆盖工程里的版本号，`CURRENT_PROJECT_VERSION` 用 run number。
 - `version` 留空时用工程的 `MARKETING_VERSION`；标签已存在会直接报错，需要换一个版本号。
