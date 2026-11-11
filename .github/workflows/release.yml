@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号（如 1.0.1，可带 v 前缀）。留空则使用工程的 MARKETING_VERSION'
+        description: '版本号。留空则使用工程的 MARKETING_VERSION'
         required: false
         type: string
 

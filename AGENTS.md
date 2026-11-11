@@ -127,9 +127,7 @@ rating = 700 × nDmg + 300 × nFrags + 150 × nWins   // 0 ~ 9999
 - **战斗类型切换**：`PlayerReport` 按 `BattleMode` 保存总览、评分和最高记录，战舰保存每艘舰的 `[BattleMode: ModeStats]`。玩家页用菜单式 `BattleModePicker` 切换，未选中时回退到`defaultMode`（有随机战用随机战，否则用第一个有数据的类型）。
 - **没有本地缓存**：评分、舰船名称、图标全部来自服务端，App 不再打包期望值数据，也不再往 Caches 里写百科 JSON。
 - **收藏**：`FavoritesStore` 是 `@MainActor @Observable`，通过 `@Environment` 注入所有页面；收藏列表以 JSON 存入 `UserDefaults`，并在 `PrivacyInfo.xcprivacy` 中声明 `NSPrivacyAccessedAPICategoryUserDefaults`（CA92.1）。顺序由用户手动拖动决定。
-- **收藏列表的编辑态**：首页右上角只有一个「⋯」菜单（编辑 / 导入 / 导出，编辑只在收藏页可用），它通过 `@State editMode` + `.environment(\.editMode, $editMode)` 切换编辑态，而不是 `EditButton`。`ForEach.onMove` 提供系统的拖拽把手；删除用行内自绘的红色减号按钮，**没有**用 `onDelete`：系统的删除控件会紧贴卡片左边、没有内边距，而且会额外插入一段左移量。
-- **收藏行的图标**：行内容自己推导航（`NavigationPath` + Button），没用 `NavigationLink`，因为 `NavigationLink` 的箭头无法隐藏，编辑时会和拖拽把手同时出现。现在箭头只在非编辑态显示，编辑态替换成减号按钮。
-- **编辑态要让出尾部空间**：系统拖拽把手贴着 cell 尾部布局，不受 `listRowInsets` 影响，卡片会一直延伸到它下面。所以 `playerCell(isEditing:)` 在编辑态把卡片右内边距加 30pt、内容尾部 padding 加到 62pt，让把手落在卡片右侧的留白里。这两个数字要一起改。
+- **收藏列表没有编辑态**：首页右上角「⋯」菜单只有导入 / 导出，没有「编辑」开关，列表也不进 `EditMode`。删除靠左滑（`swipeActions` 里的 `star.slash`，没有用 `onDelete`），排序靠长按行直接拖动（`ForEach.onMove`）。收藏行和搜索结果一样是 `NavigationLink(value:)` + `playerCell()`，所以 `NavigationStack` 不需要 `path` 绑定。
 - **收藏导入 / 导出**：`FavoritesArchive` 是分享用的 JSON（`version` / `exportedAt` / `players`），通过 `ShareLink` 交给系统分享面板（存到「文件」、AirDrop、邮件都行）写入，读取用 `.fileImporter`（只接受 `.json`）。只认导出格式本身，读不懂就提示导入失败——不保留任何旧格式 / 裸数组的兼容解析。
 - **导入语义**：`FavoritesStore.importArchive(_:)` 是「追加合并」而不是「覆盖」：已存在（同 `accountId` + 同 `server`）的条目跳过，新的追加到末尾并保留现有顺序，返回 `ImportSummary(added:skipped:)` 供弹窗提示。这样导入永远不会删掉本机已有的收藏。
 - **字体**：字号统一走 `Theme.swift` 里的语义化 `Font` token（`statLabel` / `statValue` / `detailValue` / `rowSubtitle` / `rowChevron` / `ratingValue` / `ratingTier`），全部基于 text style 以跟随 Dynamic Type。可读文字最小用 `footnote`（默认 13pt）；`caption` / `caption2` 在默认尺寸下只有 12pt / 11pt，除图标外不再使用。层级靠字重和颜色区分，不靠缩小字号，`minimumScaleFactor` 不要低于 0.8。

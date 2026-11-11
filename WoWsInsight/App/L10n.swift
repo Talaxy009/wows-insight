@@ -38,7 +38,6 @@ enum L10n {
 
     enum Common {
         static var done: String { L10n.text("common.done") }
-        static var edit: String { L10n.text("common.edit") }
         static var retry: String { L10n.text("common.retry") }
     }
 

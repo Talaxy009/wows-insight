@@ -3,8 +3,6 @@ import UniformTypeIdentifiers
 
 struct SearchView: View {
     @State private var model = SearchModel()
-    @State private var path = NavigationPath()
-    @State private var editMode: EditMode = .inactive
     @State private var isImportingFavorites = false
     @State private var importAlert: ImportAlert?
 
@@ -13,7 +11,7 @@ struct SearchView: View {
     var body: some View {
         @Bindable var model = model
 
-        NavigationStack(path: $path) {
+        NavigationStack {
             content
                 .navigationTitle(L10n.App.title)
                 .navigationDestination(for: PlayerTarget.self) { target in
@@ -32,22 +30,11 @@ struct SearchView: View {
                         serverMenu
                     }
                 }
-                .environment(\.editMode, $editMode)
                 .task(id: model.requestKey) {
                     await model.search()
                 }
                 .onChange(of: model.server) { _, _ in
                     model.clear()
-                }
-                .onChange(of: model.hasValidQuery) { _, isSearching in
-                    if isSearching {
-                        editMode = .inactive
-                    }
-                }
-                .onChange(of: favorites.players.isEmpty) { _, isEmpty in
-                    if isEmpty {
-                        editMode = .inactive
-                    }
                 }
                 .fileImporter(
                     isPresented: $isImportingFavorites,
@@ -65,11 +52,6 @@ struct SearchView: View {
                     Text(alert.message)
                 }
         }
-    }
-
-    /// The favorites list is the only place where rows can be reordered.
-    private var showsFavoriteControls: Bool {
-        !model.hasValidQuery && !favorites.players.isEmpty
     }
 
     @ViewBuilder
@@ -122,15 +104,22 @@ struct SearchView: View {
             List {
                 Section {
                     ForEach(favorites.players) { favorite in
-                        favoriteRow(favorite)
-                            .playerCell(isEditing: editMode.isEditing)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    favorites.remove(favorite)
-                                } label: {
-                                    Label(L10n.Search.favoriteRemove, systemImage: "star.slash")
-                                }
+                        NavigationLink(
+                            value: PlayerTarget(
+                                player: favorite.summary,
+                                server: favorite.server
+                            )
+                        ) {
+                            PlayerRow(player: favorite.summary, server: favorite.server)
+                        }
+                        .playerCell()
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                favorites.remove(favorite)
+                            } label: {
+                                Label(L10n.Search.favoriteRemove, systemImage: "star.slash")
                             }
+                        }
                     }
                     .onMove { offsets, destination in
                         favorites.move(fromOffsets: offsets, toOffset: destination)
@@ -143,48 +132,6 @@ struct SearchView: View {
                 }
             }
             .appListStyle()
-        }
-    }
-
-    /// One favourites row. `NavigationLink` always draws its own chevron, which
-    /// would end up next to the reorder handle while editing, so the row pushes
-    /// the player page itself and swaps the chevron for a delete button when
-    /// `editMode` is active. The delete button is drawn inside the card instead
-    /// of using `onDelete`: the system control sits flush against the card's
-    /// leading edge, while this one keeps the same inset as the text.
-    @ViewBuilder
-    private func favoriteRow(_ favorite: FavoritePlayer) -> some View {
-        HStack(spacing: 12) {
-            if editMode.isEditing {
-                Button {
-                    favorites.remove(favorite)
-                } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.red)
-                        .frame(width: 26)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L10n.Search.favoriteRemove)
-            }
-
-            Button {
-                guard !editMode.isEditing else { return }
-                path.append(
-                    PlayerTarget(player: favorite.summary, server: favorite.server)
-                )
-            } label: {
-                HStack(spacing: 10) {
-                    PlayerRow(player: favorite.summary, server: favorite.server)
-                    if !editMode.isEditing {
-                        Image(systemName: "chevron.right")
-                            .font(.rowChevron)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
         }
     }
 
@@ -204,18 +151,6 @@ struct SearchView: View {
 
     private var favoritesMenu: some View {
         Menu {
-            Button {
-                editMode = editMode.isEditing ? .inactive : .active
-            } label: {
-                Label(
-                    editMode.isEditing ? L10n.Common.done : L10n.Common.edit,
-                    systemImage: editMode.isEditing ? "checkmark" : "arrow.up.arrow.down"
-                )
-            }
-            .disabled(!showsFavoriteControls)
-
-            Divider()
-
             Button {
                 isImportingFavorites = true
             } label: {
@@ -315,27 +250,15 @@ private struct ImportAlert: Identifiable {
 private extension View {
     /// Shared chrome for one player cell: no separator and a card drawn as the
     /// row background, so the disclosure chevron sits inside it.
-    ///
-    /// While editing the list reserves ~24pt at the trailing edge for the
-    /// system reorder handle, which is laid out against the cell edge and
-    /// ignores `listRowInsets`. The card and the content are pulled in by the
-    /// same amount so the handle keeps a gap from the card instead of sitting
-    /// on its edge.
-    func playerCell(isEditing: Bool = false) -> some View {
+    func playerCell() -> some View {
         listRowSeparator(.hidden)
             .listRowInsets(
-                EdgeInsets(
-                    top: 4,
-                    leading: 32,
-                    bottom: 4,
-                    trailing: isEditing ? 62 : 32
-                )
+                EdgeInsets(top: 4, leading: 32, bottom: 4, trailing: 32)
             )
             .listRowBackground(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.appCard)
                     .padding(.horizontal, 16)
-                    .padding(.trailing, isEditing ? 30 : 0)
                     .padding(.vertical, 4)
             )
     }
