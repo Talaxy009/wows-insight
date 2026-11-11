@@ -11,9 +11,16 @@ struct PlayerReport: Sendable {
     let modeStats: [BattleMode: ModeStats]
     let modeRecords: [BattleMode: [BattleRecord]]
     let ships: [ShipPerformance]
+    /// Days the service recorded, oldest first; empty when it has no records.
+    let dailyStats: [DailyStats]
+    let shipTypes: [CategoryStats]
+    let tiers: [CategoryStats]
 
-    init(overview: AccountOverview, shipStats: [ShipStat]) {
+    init(overview: AccountOverview, shipStats: [ShipStat], dailyStats: [DailyStats]) {
         account = overview.account
+        self.dailyStats = dailyStats
+        shipTypes = overview.shipTypes
+        tiers = overview.tiers
 
         // Every ship goes into the catalog, not just the ones with visible
         // stats, so a record can always name the ship it was achieved on.
@@ -38,6 +45,25 @@ struct PlayerReport: Sendable {
 
     func stats(for mode: BattleMode) -> ModeStats? { modeStats[mode] }
     func records(for mode: BattleMode) -> [BattleRecord] { modeRecords[mode] ?? [] }
+
+    /// The recorded days that fought `mode`, which is what the trend chart
+    /// plots.
+    func dailyStats(for mode: BattleMode) -> [DailyStats] {
+        dailyStats.filter { ($0.modes[mode]?.stats.battleCount ?? 0) > 0 }
+    }
+
+    /// The categories that fought `mode`, in chart order.
+    func categories(_ breakdown: ChartBreakdown, for mode: BattleMode) -> [CategoryStats] {
+        let source = breakdown == .shipType ? shipTypes : tiers
+        return source
+            .filter { ($0.modes[mode]?.stats.battleCount ?? 0) > 0 }
+            .sorted { lhs, rhs in
+                if lhs.sortOrder == rhs.sortOrder {
+                    return lhs.label.localizedStandardCompare(rhs.label) == .orderedAscending
+                }
+                return lhs.sortOrder < rhs.sortOrder
+            }
+    }
 }
 
 struct ShipPerformance: Identifiable, Sendable {

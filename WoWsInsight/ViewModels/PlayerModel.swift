@@ -45,11 +45,20 @@ final class PlayerModel {
                 accountID: account.accountId,
                 server: server
             )
+            // Never throws: a player without daily records simply gets no chart.
+            async let dailyRequest = client.recentDays(
+                accountID: account.accountId,
+                server: server
+            )
 
-            let (info, shipStats) = try await (infoRequest, shipsRequest)
+            let (info, shipStats, daily) = try await (infoRequest, shipsRequest, dailyRequest)
             guard !Task.isCancelled else { return }
 
-            report = PlayerReport(overview: info, shipStats: shipStats)
+            report = PlayerReport(
+                overview: info,
+                shipStats: shipStats,
+                dailyStats: daily
+            )
             hasLoaded = true
         } catch {
             guard !error.isCancellation else { return }

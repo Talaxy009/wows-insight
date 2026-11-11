@@ -147,6 +147,19 @@ enum L10n {
         }
     }
 
+    // MARK: - Charts
+
+    /// Titles and axis names of the charts on the player page. The plotted
+    /// metrics reuse the labels of the statistics cards.
+    enum Chart {
+        static var trendTitle: String { L10n.text("player.charts.trend.title") }
+        static var breakdownTitle: String { L10n.text("player.charts.breakdown.title") }
+        static var shipType: String { L10n.text("player.charts.breakdown.shipType") }
+        static var tier: String { L10n.text("player.charts.breakdown.tier") }
+        /// Axis name; only read out by assistive technology.
+        static var day: String { L10n.text("player.charts.axis.day") }
+    }
+
     // MARK: - Battle types
 
     /// Names of the battle types the API reports in `battleTypeInfo`.

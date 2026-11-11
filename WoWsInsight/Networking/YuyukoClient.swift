@@ -109,7 +109,42 @@ struct YuyukoClient: Sendable {
             dogTagURL: user.dogTag.flatMap(URL.init(string:))
         )
 
-        return AccountOverview(account: account, modes: data.battleTypeInfo?.modeStats ?? [:])
+        return AccountOverview(
+            account: account,
+            modes: data.battleTypeInfo?.modeStats ?? [:],
+            shipTypes: (data.shipTypeInfo ?? [:]).categories { .shipType($0) },
+            tiers: (data.levelInfo ?? [:]).categories { Int($0).map(CategoryKey.tier) }
+        )
+    }
+
+    /// The daily records of the player, oldest first.
+    ///
+    /// The service only keeps records for accounts it has already been asked
+    /// about, and answers `412` when there are none; every failure means "no
+    /// trend to draw" here, so the player page still loads without the chart.
+    func recentDays(accountID: Int, server: GameServer) async -> [DailyStats] {
+        let data: YuyukoRecentDaysData
+        do {
+            data = try await get(
+                path: "public/wows/account/day/list/info",
+                query: Self.accountQuery(accountID: accountID, server: server)
+            )
+        } catch {
+            return []
+        }
+
+        let calendar = Calendar.current
+        return (data.recentInfo ?? [])
+            .compactMap { entry -> DailyStats? in
+                guard let timestamp = entry.recordTime, timestamp > 0 else { return nil }
+                let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000)
+                return DailyStats(
+                    recordedAt: date,
+                    day: calendar.startOfDay(for: date),
+                    modes: entry.battleTypeInfoList?.modeStats ?? [:]
+                )
+            }
+            .sorted { $0.recordedAt < $1.recordedAt }
     }
 
     /// Per-ship statistics, including the metadata and the totals of every

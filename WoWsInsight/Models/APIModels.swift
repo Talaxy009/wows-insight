@@ -34,17 +34,21 @@ struct ShipInfo: Identifiable, Hashable, Sendable {
         return URL(string: imageURLString)
     }
 
-    var tierLabel: String {
-        let labels = Self.tierLabels
-        guard tier >= 1, tier <= labels.count else { return StatFormat.placeholder }
-        return labels[tier - 1]
+    var tierLabel: String { Self.tierLabel(for: tier) }
+
+    /// "I" … "X", then "★" for superships.
+    static func tierLabel(for tier: Int) -> String {
+        guard tier >= 1, tier <= tierLabels.count else { return StatFormat.placeholder }
+        return tierLabels[tier - 1]
     }
 
     private static let tierLabels = [
         "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "★",
     ]
 
-    var typeLabel: String {
+    var typeLabel: String { Self.typeLabel(for: type) }
+
+    static func typeLabel(for type: String) -> String {
         switch type {
         case "Battleship": L10n.ShipType.battleship
         case "Cruiser": L10n.ShipType.cruiser
@@ -55,6 +59,11 @@ struct ShipInfo: Identifiable, Hashable, Sendable {
         default: type.isEmpty ? L10n.ShipType.unknown : type
         }
     }
+
+    /// The order the game lists the ship types in, used by the chart legend.
+    static let typeOrder = [
+        "Destroyer", "Cruiser", "Battleship", "AirCarrier", "Submarine", "Auxiliary",
+    ]
 }
 
 /// Totals, rating and last battle of a player or of one ship in one battle
@@ -69,6 +78,10 @@ struct ModeStats: Sendable {
 struct AccountOverview: Sendable {
     let account: AccountInfo
     let modes: [BattleMode: ModeStats]
+    /// `shipTypeInfo`, grouped by ship type.
+    let shipTypes: [CategoryStats]
+    /// `levelInfo`, grouped by ship tier.
+    let tiers: [CategoryStats]
 }
 
 /// The Yuyuko API returns the ship metadata, the totals of every battle type and

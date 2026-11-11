@@ -21,7 +21,23 @@ struct YuyukoSearchUser: Decodable, Sendable {
 struct YuyukoUserInfoData: Decodable, Sendable {
     let userInfo: YuyukoUserDetail?
     let battleTypeInfo: [String: YuyukoModeSummary]?
+    /// Keyed by ship type code (`Cruiser`, …), then by battle type.
+    let shipTypeInfo: [String: [String: YuyukoModeSummary]]?
+    /// Keyed by tier (`"1"` … `"11"`), then by battle type.
+    let levelInfo: [String: [String: YuyukoModeSummary]]?
     let lastBattleTime: Int?
+}
+
+// MARK: - Recently recorded days
+
+struct YuyukoRecentDaysData: Decodable, Sendable {
+    let recentInfo: [YuyukoRecentDay]?
+}
+
+struct YuyukoRecentDay: Decodable, Sendable {
+    /// Milliseconds since the epoch, when the record was taken.
+    let recordTime: Int?
+    let battleTypeInfoList: [String: YuyukoModeSummary]?
 }
 
 struct YuyukoUserDetail: Decodable, Sendable {
@@ -141,6 +157,21 @@ extension Dictionary where Key == String, Value == YuyukoModeSummary {
                 rating: entry.value.prInfo?.playerRating ?? .unknown,
                 lastBattleTime: block.lastBattleTime
             )
+        }
+    }
+}
+
+/// `shipTypeInfo` and `levelInfo` nest the same battle-type summary one level
+/// deeper, keyed by the category the chart groups by.
+extension Dictionary where Key == String, Value == [String: YuyukoModeSummary] {
+    /// Only categories that were actually played, so the chart never draws an
+    /// empty bar.
+    func categories(key: (String) -> CategoryKey?) -> [CategoryStats] {
+        compactMap { name, modes -> CategoryStats? in
+            guard let key = key(name) else { return nil }
+            let stats = modes.modeStats
+            guard stats.values.contains(where: { $0.stats.battleCount > 0 }) else { return nil }
+            return CategoryStats(key: key, modes: stats)
         }
     }
 }

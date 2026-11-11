@@ -7,6 +7,8 @@ struct PlayerView: View {
     @State private var model: PlayerModel
     @State private var sort: ShipSort = .defaultSort
     @State private var selectedMode: BattleMode?
+    @State private var chartMetric: ChartMetric = .rating
+    @State private var chartBreakdown: ChartBreakdown = .shipType
     @State private var showRatingInfo = false
 
     @Environment(FavoritesStore.self) private var favorites
@@ -118,6 +120,13 @@ struct PlayerView: View {
                 }
 
                 StatsSections(stats: stats, records: report.records(for: mode))
+
+                PlayerChartsSection(
+                    report: report,
+                    mode: mode,
+                    metric: $chartMetric,
+                    breakdown: $chartBreakdown
+                )
 
                 ShipsSection(ships: report.ships, mode: mode, sort: $sort)
             } else {

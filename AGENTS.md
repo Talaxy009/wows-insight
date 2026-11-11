@@ -44,6 +44,7 @@ WoWsInsight/
     │   ├── BattleStats.swift          // 统计字段、派生数据与最高记录
     │   ├── PersonalRating.swift       // 评分值与评分档位
     │   ├── PlayerReport.swift         // 玩家报告、战舰表现、排序与最高记录
+    │   ├── ChartStats.swift           // 图表数据：每日记录、舰种 / 等级分组
     │   ├── FavoritePlayer.swift       // 本地收藏的玩家
     │   ├── FavoritesArchive.swift     // 收藏导入 / 导出的 JSON 文件格式
     │   └── ShipNation.swift           // 战舰国家与本地化标签
@@ -59,6 +60,7 @@ WoWsInsight/
     │   ├── SearchView.swift           // 搜索页 + 首页收藏
     │   ├── PlayerView.swift           // 玩家页与战舰列表
     │   ├── PlayerCards.swift          // 玩家页卡片组件
+    │   ├── PlayerCharts.swift         // 玩家页图表（趋势、评分分布）
     │   ├── ShipDetailView.swift       // 单舰详情
     │   ├── Components.swift           // 评分徽章、统计格子等
     │   └── Theme.swift                // 颜色、卡片样式
@@ -78,10 +80,11 @@ WoWsInsight/
 | 数据                       | Yuyuko 接口                                     | 说明                            |
 | -------------------------- | ----------------------------------------------- | ------------------------------- |
 | 玩家搜索                   | `POST public/wows/account/search/{server}/user` | 返回 `accountId` + `userName`   |
-| 玩家总览 + 分类型战绩      | `GET public/wows/account/user/info2`            | 按战斗类型返回 `battleTypeInfo` |
+| 玩家总览 + 分类型战绩      | `GET public/wows/account/user/info2`            | 按战斗类型返回 `battleTypeInfo`，另外带 `shipTypeInfo` / `levelInfo` |
 | 每舰战绩 + 舰船信息 + 评分 | `GET public/wows/account/ship/info/list`        | 一次拿全，无需再下百科          |
+| 每日近期记录               | `GET public/wows/account/day/list/info`         | `recentInfo` 按天给出当天战绩，用于趋势图 |
 
-三个接口都不需要鉴权。`{server}` 直接用 `GameServer.rawValue`，取值是 `ru` / `eu` / `na` / `asia` / `cn`，字段名以 v3 文档为准，`YuyukoModels.swift` 另外处理两处嵌套差异：`account/user/info2` 的 `battleTypeInfo[code].shipInfo` 和 `ship/info/list` 的 `typeInfo[code].battleInfo` 是同一套 `BattleInfoData`，只是名字不同。
+四个接口都不需要鉴权。`{server}` 直接用 `GameServer.rawValue`，取值是 `ru` / `eu` / `na` / `asia` / `cn`，字段名以 v3 文档为准，`YuyukoModels.swift` 另外处理两处嵌套差异：`account/user/info2` 的 `battleTypeInfo[code].shipInfo` 和 `ship/info/list` 的 `typeInfo[code].battleInfo` 是同一套 `BattleInfoData`，只是名字不同。
 
 ### 战斗类型
 
@@ -121,10 +124,11 @@ rating = 700 × nDmg + 300 × nFrags + 150 × nWins   // 0 ~ 9999
 - **Swift 6 / 严格并发**：`YuyukoClient` 是 `Sendable` 值类型，ViewModel 使用 `@MainActor @Observable`。
 - **取消与防抖**：搜索框每次变化通过 `.task(id:)` 取消上一次请求，等待 350ms 后请求；网络返回后检查 `Task.isCancelled` 和请求 key，避免旧结果覆盖新结果。请求 key 用去掉首尾空白的昵称，只改空白不会触发新请求。
 - **错误口径**：`URLSession` 的 `URLError.cancelled` 在 `YuyukoClient` 里统一转成 `CancellationError`，页面切换不会弹出错误；HTTP 404 / 405 统一映射为 `notFound`，和信封里 `code` 的语义保持一致。
-- **并发加载**：玩家总览和战舰列表用 `async let` 并发请求；玩家首次查询约 6–8 秒（服务端要回源 Wargaming），命中缓存后 0.3–0.6 秒，所以超时设为 30 秒。
-- **一次成型**：两个请求都返回后才构建 `PlayerReport`，不再有「总览先出、百科后到」的中间态。
+- **并发加载**：玩家总览、战舰列表和每日记录用 `async let` 并发请求；玩家首次查询约 6–8 秒（服务端要回源 Wargaming），命中缓存后 0.3–0.6 秒，所以超时设为 30 秒。
+- **一次成型**：三个请求都返回后才构建 `PlayerReport`，不再有「总览先出、百科后到」的中间态。每日记录例外：`recentDays` 不抛错，失败就当作「没有记录」，页面照常显示。
 - **玩家页头像**：昵称左侧显示 `userInfo.dogTag`。它是服务端给的 190×190 PNG 直链，没有该字段或取不到图时显示占位暗块，所以模型里存成 `AccountInfo.dogTagURL`。
 - **战斗类型切换**：`PlayerReport` 按 `BattleMode` 保存总览、评分和最高记录，战舰保存每艘舰的 `[BattleMode: ModeStats]`。玩家页用菜单式 `BattleModePicker` 切换，未选中时回退到`defaultMode`（有随机战用随机战，否则用第一个有数据的类型）。
+- **图表**：玩家页有两张卡，都跟随当前战斗类型。①「近期趋势」用 Swift Charts 折线 + 面积画 `account/day/list/info` 的 `recentInfo`（每天一条当天战绩），在评分 / 胜率之间切换；面积的基线必须显式写成 y 轴下界（`AreaMark(yStart:yEnd:)`），默认基线是图表 frame 底部，会盖住日期轴并溢出卡片；少于两天不画（一个点不是趋势），x 轴按整天取刻度避免同一天出现两个日期标签，胜率会把刻度略微放出 0–100 之外，免得 0% / 100% 的点被裁掉。②「评分分布」取 `info2` 的 `shipTypeInfo` / `levelInfo`，在舰种 / 等级之间切换；这张卡是自绘的条形行而不是 Swift Charts 的横向条形图——iOS 26 上分类轴的标签会画进绘图区、和条形重叠。两张卡的选中项存在 `PlayerView` 里，因为 `LazyVStack` 回收卡片时会丢掉卡片自己的 `@State`。没有数据的卡片整张隐藏，所以服务端没记录过的账号（`code: 412 无recent记录`）只会少一张卡，不会看到空图。
 - **没有本地缓存**：评分、舰船名称、图标全部来自服务端，App 不再打包期望值数据，也不再往 Caches 里写百科 JSON。
 - **收藏**：`FavoritesStore` 是 `@MainActor @Observable`，通过 `@Environment` 注入所有页面；收藏列表以 JSON 存入 `UserDefaults`，并在 `PrivacyInfo.xcprivacy` 中声明 `NSPrivacyAccessedAPICategoryUserDefaults`（CA92.1）。顺序由用户手动拖动决定。
 - **收藏列表没有编辑态**：首页右上角「⋯」菜单只有导入 / 导出，没有「编辑」开关，列表也不进 `EditMode`。删除靠左滑（`swipeActions` 里的 `star.slash`，没有用 `onDelete`），排序靠长按行直接拖动（`ForEach.onMove`）。收藏行和搜索结果一样是 `NavigationLink(value:)` + `playerCell()`，所以 `NavigationStack` 不需要 `path` 绑定。
@@ -161,7 +165,8 @@ rating = 700 × nDmg + 300 × nFrags + 150 × nWins   // 0 ~ 9999
 CI 只有一个 Release 工作流，不跑测试，只负责编译打包。
 
 > 功能变更后默认只做类型检查和 `xcodebuild` 构建。**如需启动模拟器（`simctl boot` /
-> `install` / `launch`、截图等）验证，先征求用户同意**，不要自行开启。
+> `install` / `launch`、截图等）验证，先征求用户同意**，不要自行开启；需要看真实界面时，
+> 走下面的 Pinky 流程装到用户的真机上。
 
 ```sh
 # 指定 Xcode（xcode-select 指向 CommandLineTools 时必需）
@@ -179,6 +184,49 @@ xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight \
 
 > 本机的 DSH 文件沙盒会阻止 Xcode 的 Swift 宏插件子进程；命令行构建时加了
 > `OTHER_SWIFT_FLAGS='-Xfrontend -disable-sandbox'`。正常用 Xcode IDE 构建不需要这个参数。
+
+### 真机调试（Pinky）
+
+用 Pinky 的 `phone_*` 工具把 Debug 构建装到用户 iPhone 上看真实界面。一个「改 → 装 → 看」
+循环约 1–2 分钟，所以尽量一次改完再装。
+
+```sh
+# 1. UDID：xcrun devicectl list devices，取 physical 设备的 Identifier
+# 2. 打包（自动签名，-allowProvisioningUpdates 缺了会报没有描述文件）
+xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight -configuration Debug \
+  -destination 'platform=iOS,id=<UDID>' -derivedDataPath /tmp/wows-device \
+  -allowProvisioningUpdates build OTHER_SWIFT_FLAGS='-Xfrontend -disable-sandbox'
+# 3. 确认签名与版本
+codesign -d --entitlements :- /tmp/wows-device/Build/Products/Debug-iphoneos/WoWsInsight.app
+/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
+  /tmp/wows-device/Build/Products/Debug-iphoneos/WoWsInsight.app/Info.plist
+```
+
+- 装：把 `WoWsInsight.app` 整个目录复制进 Pinky 的电脑端文件夹（`phone_files {}` 会打印路径，
+  macOS 上是 `~/Library/Application Support/Pinky/files/<UDID>`，iPhone 本身没有 Pinky 目录），
+  再 `phone_app { action: "install", paths: ["WoWsInsight.app"] }`。覆盖安装保留 UserDefaults
+  里的收藏；版本不能比已装的低，同版本可以反复装。
+- 手机锁屏会返回 `device_locked`，要 `phone_handoff` 让用户解锁；`phone_app stop` 不需要审批，
+  用来验证「冷启动后的持久化」（退出再 `phone_launch`，收藏顺序/数据应保持）。
+- **这个 App 的界面几乎全是 SwiftUI 自绘文本，元素树是空的**，一律用
+  `phone_observe { ocr: true }` 读文字，按 OCR 坐标点。
+- **排版问题只能靠截图看**：重叠、溢出、裁切在 OCR 里看不出来。用
+  `phone_observe { save: "x.png" }` 存图，再用 `sips -c <高> <宽> --cropOffset <y> 0 x.png --out c.png`
+  裁出局部放大检查（截图是 3x，OCR 坐标就是截图像素）。
+- 返回上一页后列表位置会变，操作前重新 `observe` 再取坐标；`phone_swipe` 只能二选一：
+  `direction` 或 `from`+`to`，同时给会报 `invalid_argument`。
+- 长按拖动排序用 `phone_drag`（`hold_ms` 至少 800 才能把行拿起来），`via` 给中间点、
+  `pause_ms` 松手前停一下；`phone_swipe` 只会滚动。
+- `phone_batch` 里只放 tap / type / swipe / launch 这类界面动作（`phone_app` 放进去会报参数错误），
+  且遇到第一个非 settled 的步骤就停，剩下的步骤要另起一批。
+- `phone_type` 返回 `uncertain`（「没有焦点」）时先 `observe`，文字可能已经输进去了，别盲目重打。
+- 会改数据的操作要能撤回：左滑只滑一半、看到「取消收藏」就点空白关掉；拖动排序后拖回原位，
+  收尾时用 OCR 核对顺序；导入 / 导出只确认面板能弹出，然后点面板外关闭，不要真的写文件。
+- 日志：iPhone 上 `phone_logs` 没有历史，第一次调用才开始监听，所以按「调用一次 → 复现 →
+  再调用（`since: "5m"`）」的顺序取；不要传 `kind`（传 `"logs"` 会被 MCP 以
+  `invalid_argument` 拒绝），输出过大时按关键字 grep（本 App 的请求主机是
+  `v3-api.wows.shinoaki.com`）。
+- 收尾：`phone_release`，并删掉 `/tmp/wows-device` 和 Pinky 文件夹里的截图。
 
 ## 发布
 
@@ -209,6 +257,4 @@ xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight \
 ## 后续可扩展方向
 
 - 收藏分组、按名称 / 评分自动排序
-- 图表（Swift Charts）展示评分和胜率变化
 - 排位赛季与成就
-- 接口已有的按舰种 / 按等级评分（`shipTypeInfo`、`levelInfo`）可以做成新卡片
