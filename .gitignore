@@ -3,3 +3,14 @@ build/
 DerivedData/
 *.xcuserstate
 xcuserdata/
+
+# 打包产物
+*.ipa
+*.apk
+*.aab
+
+# 签名材料，禁止提交
+*.jks
+*.keystore
+*.b64
+keystore.properties

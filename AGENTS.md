@@ -1,81 +1,62 @@
 # AGENTS.md
 
-面向在本仓库工作的开发者 / AI 代理的项目说明。用户视角的功能介绍见 [README.md](./README.md)。
+面向在本仓库工作的开发者 / AI 代理的仓库级说明。用户视角的功能介绍见 [README.md](./README.md)。
 
-## 技术栈
+本仓库是一个多平台仓库：`ios/` 与 `android/` 是两个功能对齐的原生客户端，共用同一套
+Yuyuko 公共接口、统计口径和收藏文件格式。平台自己的实现约定放在对应目录的 `AGENTS.md`，
+本文只保留两个平台共享的内容。
 
-- Xcode 16 或更新版本（工程使用 Xcode 16 的文件夹同步分组，新增文件不需要手改 `project.pbxproj`）
-- iOS 18.0+ / Swift 6（严格并发）
-- 无第三方依赖、无 CocoaPods / SPM：只用 Foundation + SwiftUI + Observation
-- 架构：SwiftUI + `@Observable` + async/await，没有手写 UIKit 生命周期
+## 先读哪份文档
+
+| 要改的地方 | 必读 |
+| --- | --- |
+| iOS（Swift / SwiftUI / Xcode / 真机调试） | [ios/AGENTS.md](./ios/AGENTS.md) |
+| Android（Kotlin / Compose / Gradle / 本地化资源） | [android/AGENTS.md](./android/AGENTS.md) |
+| 接口口径、评分算法、收藏格式、发布流程 | 本文 |
+| 跨平台多步流程（多语言、应用图标、收藏文件、发布、接口接入） | [.agents/skills/](./.agents/skills/) |
+
+## 仓库结构
+
+```txt
+.
+├── ios/                        # 原生 iOS 客户端
+│   ├── README.md               # 用户视角：运行、构建、已知限制
+│   ├── AGENTS.md               # 开发者视角：结构、实现要点、调试
+│   ├── WoWsInsight.xcodeproj
+│   └── WoWsInsight/
+├── android/                    # 原生 Android 客户端
+│   ├── README.md
+│   ├── AGENTS.md
+│   ├── app/
+│   ├── docs/
+│   └── icon.svg                # 应用图标源文件
+├── .agents/
+│   └── skills/                 # 可复用流程：多语言、应用图标、收藏格式、发布、接口口径
+│       ├── wows-localization/SKILL.md
+│       ├── wows-app-icon/SKILL.md
+│       ├── wows-favorites-archive/SKILL.md
+│       ├── wows-release/SKILL.md
+│       └── wows-yuyuko-api/SKILL.md
+├── .github/
+│   └── workflows/
+│       └── release.yml         # 手动触发：打包已签名 APK + 未签名 IPA 并发布
+├── README.md                   # 仓库总览与两个平台共用的用户说明
+└── AGENTS.md                   # 本文件
+```
 
 ## 数据来源
 
-App 不直接调用 Wargaming API，所有数据来自社区的 Yuyuko API（`https://v3-api.wows.shinoaki.com`，文档 `https://v3-api.wows.shinoaki.com/v3/index.html`），只使用 `/public/*` 系列接口，无需 Authorization。
+两个客户端都不直接调用 Wargaming API，所有数据来自社区的 Yuyuko API
+（`https://v3-api.wows.shinoaki.com`，文档 `https://v3-api.wows.shinoaki.com/v3/index.html`），
+只使用 `/public/*` 系列接口，无需 Authorization。
 
-因此**不要**再引入 `Config.plist`、`application_id`、环境变量 Key 之类的配置，也不要把 `Yuyuko-Client-Type` 之外的认证信息写进代码。
+**不要**引入 `Config.plist`、`application_id`、环境变量 Key 之类的配置，也不要把
+`Yuyuko-Client-Type` 之外的认证信息写进代码。
 
 - 请求统一带 `Yuyuko-Client-Type: APP;WoWsInsight;1.0`（文档标注为必填，服务端用它区分客户端）。
 - 响应是 `{ code, message, data }` 信封，`code == 200` 才算成功。
-- 这是第三方服务，没有 SLA。改动接口层时优先保证「字段缺失也能正常显示」，`YuyukoModels.swift` 里的 DTO 全部是 optional 就是这个原因。
-
-运行只需在 Target → Signing & Capabilities 里选 Team 并按需改 Bundle Identifier。
-
-收藏不支持 iCloud 同步：免费的个人 Team（Personal Team）无法签名 iCloud 能力（Xcode 会报 `Personal development teams ... do not support the iCloud capability`），所以工程里没有任何 entitlement / CloudKit 容器，收藏只存在本机，跨设备迁移用首页右上角「⋯」菜单里的导入 / 导出 JSON 文件。
-
-## 工程结构
-
-```txt
-.github/
-└── workflows/release.yml   // 手动触发：打包未签名 IPA 并发布 Release
-
-WoWsInsight/
-├── WoWsInsight.xcodeproj
-│   └── xcshareddata/xcschemes/WoWsInsight.xcscheme
-└── WoWsInsight/
-    ├── App/
-    │   ├── WoWsInsightApp.swift        // SwiftUI App 生命周期
-    │   ├── AppConfig.swift            // 战舰名称语言（跟随系统语言）
-    │   └── L10n.swift                 // 所有界面文案 key 的统一入口
-    ├── Models/
-    │   ├── GameServer.swift           // 五个服务器与 API 服务器码映射
-    │   ├── APIModels.swift            // 界面使用的数据模型
-    │   ├── BattleMode.swift           // 战斗类型与 API 代码
-    │   ├── BattleStats.swift          // 统计字段、派生数据与最高记录
-    │   ├── PersonalRating.swift       // 评分值与评分档位
-    │   ├── PlayerReport.swift         // 玩家报告、战舰表现、排序与最高记录
-    │   ├── ChartStats.swift           // 图表数据：每日记录、舰种 / 等级分组
-    │   ├── FavoritePlayer.swift       // 本地收藏的玩家
-    │   ├── FavoritesArchive.swift     // 收藏导入 / 导出的 JSON 文件格式
-    │   └── ShipNation.swift           // 战舰国家与本地化标签
-    ├── Networking/
-    │   ├── YuyukoClient.swift         // async/await API 客户端
-    │   └── YuyukoModels.swift         // Yuyuko 响应 DTO 与到界面模型的映射
-    ├── ViewModels/
-    │   ├── SearchModel.swift          // 搜索、防抖、取消
-    │   ├── PlayerModel.swift          // 并发加载玩家总览 + 战舰列表
-    │   └── FavoritesStore.swift       // 收藏读写、排序、导入导出
-    ├── Views/
-    │   ├── RootView.swift             // 根视图、评分说明
-    │   ├── SearchView.swift           // 搜索页 + 首页收藏
-    │   ├── PlayerView.swift           // 玩家页与战舰列表
-    │   ├── PlayerCards.swift          // 玩家页卡片组件
-    │   ├── PlayerCharts.swift         // 玩家页图表（趋势、评分分布）
-    │   ├── ShipDetailView.swift       // 单舰详情
-    │   ├── Components.swift           // 评分徽章、统计格子等
-    │   └── Theme.swift                // 颜色、卡片样式
-    ├── Utilities/
-    │   ├── Formatting.swift           // 数字 / 百分比 / 日期格式化
-    │   └── TaskCancellation.swift     // 取消错误的统一判断
-    ├── Localizable.xcstrings          // en / ja / ko / zh-Hans / zh-Hant 界面文案
-    ├── InfoPlist.xcstrings            // 各语言 App 名称
-    ├── PrivacyInfo.xcprivacy          // UserDefaults 隐私清单
-    └── Assets.xcassets                // AppIcon、AccentColor
-```
-
-页面只有三个主界面：搜索/收藏首页、玩家详情、单舰详情。
-
-## 数据来源与口径
+- 这是第三方服务，没有 SLA。接口层必须保证「字段缺失也能正常显示」，两端的 DTO 都按可空处理。
+- HTTP 404 / 405 与信封里同样的 code 统一映射为「找不到」，取消请求不能弹出错误。
 
 | 数据                       | Yuyuko 接口                                     | 说明                            |
 | -------------------------- | ----------------------------------------------- | ------------------------------- |
@@ -84,22 +65,31 @@ WoWsInsight/
 | 每舰战绩 + 舰船信息 + 评分 | `GET public/wows/account/ship/info/list`        | 一次拿全，无需再下百科          |
 | 每日近期记录               | `GET public/wows/account/day/list/info`         | `recentInfo` 按天给出当天战绩，用于趋势图 |
 
-四个接口都不需要鉴权。`{server}` 直接用 `GameServer.rawValue`，取值是 `ru` / `eu` / `na` / `asia` / `cn`，字段名以 v3 文档为准，`YuyukoModels.swift` 另外处理两处嵌套差异：`account/user/info2` 的 `battleTypeInfo[code].shipInfo` 和 `ship/info/list` 的 `typeInfo[code].battleInfo` 是同一套 `BattleInfoData`，只是名字不同。
+`{server}` 取值是 `ru` / `eu` / `na` / `asia` / `cn`，字段名以 v3 文档为准。两处嵌套差异：
+`account/user/info2` 的 `battleTypeInfo[code].shipInfo` 和 `ship/info/list` 的
+`typeInfo[code].battleInfo` 是同一套 `BattleInfoData`，只是名字不同。
 
 ### 战斗类型
 
-`account/user/info2` 的 `battleTypeInfo` 是以 API 代码为 key 的字典：`PVP` / `PVP_SOLO` / `PVP_DIV2` / `PVP_DIV3` / `RANK(_SOLO/_DIV2/_DIV3)` / `RANK_OLD*` /`CLAN` / `BRAWL` / `OPER_MM` / `PVE(_SOLO/_DIV2/_DIV3)` / `RATING(_SOLO/_DIV)`。`BattleMode` 的 raw value 就是这些代码，声明顺序即选择器顺序（随机战最前），未知代码直接忽略。每艘战舰的 `typeInfo` 用同一套代码，所以玩家页切换类型时，总览、详细数据、最高记录和战舰列表会一起切到该类型。默认显示随机战（`PVP`）。
-
-只有该账号在某个类型里打过仗（`battleCount > 0`）才会出现在选择器里。
+`account/user/info2` 的 `battleTypeInfo` 是以 API 代码为 key 的字典：`PVP` / `PVP_SOLO` /
+`PVP_DIV2` / `PVP_DIV3` / `RANK(_SOLO/_DIV2/_DIV3)` / `RANK_OLD*` / `CLAN` / `BRAWL` /
+`OPER_MM` / `PVE(_SOLO/_DIV2/_DIV3)` / `RATING(_SOLO/_DIV)`。两端的 `BattleMode`（iOS 的
+`BattleMode.swift`、Android 的 `BattleMode.kt`）用同一套 raw value，声明顺序即选择器顺序
+（随机战最前），未知代码直接忽略。每艘战舰的 `typeInfo` 用同一套代码，所以玩家页切换类型时，
+总览、详细数据、最高记录和战舰列表会一起切到该类型。默认显示随机战（`PVP`）。只有该账号在
+某个类型里打过仗（`battleCount > 0`）才会出现在选择器里。
 
 ### 个人评分
 
 评分由服务端给出：
 
-- 玩家评分按类型取 `battleTypeInfo[code].prInfo.value`，页面切换到哪个类型就显示哪个评分。顶层 `prInfo` 是「全部模式」口径，没有使用。
+- 玩家评分按类型取 `battleTypeInfo[code].prInfo.value`，页面切换到哪个类型就显示哪个评分。
+  顶层 `prInfo` 是「全部模式」口径，不使用。
 - 每艘战舰的评分取该舰 `typeInfo[code].prInfo.value`，同样跟随当前类型。
-- `prInfo.code == 0` 表示「暂无数据」，映射成 `PlayerRating.unknown`（显示为 `—`）。
-- 服务端用的是 wows-numbers 公式套各服务器自己的期望值，所以同一账号的分数会和直接查 wows-numbers 有出入；分档与颜色仍由本地 `RatingTier` 决定。
+- `prInfo.code == 0` 表示「暂无数据」，显示为 `—`。
+- 服务端用的是 wows-numbers 公式套各服务器自己的期望值，所以同一账号的分数会和直接查
+  wows-numbers 有出入；分档与颜色由两端本地的 `RatingTier` 决定，分数段必须保持一致：
+  0–749 / 750–1099 / 1100–1349 / 1350–1549 / 1550–1749 / 1750–2099 / 2100–2449 / 2450+。
 
 ```txt
 rDmg   = 实际平均伤害 / 期望平均伤害
@@ -117,144 +107,104 @@ rating = 700 × nDmg + 300 × nFrags + 150 × nWins   // 0 ~ 9999
 
 - 接口没有平局场数，`drawCount` 由 `battle - wins - losses` 推出。
 - 接口没有主炮射击数 / 命中数，命中率直接用 `hitRatioInfo.ratioMain` 的百分比。
-- 国服只支持精确昵称搜索（`one: true`），输入不完整时上游返回 HTTP 400（`code: 540`），搜索层把它当作「无结果」；其他服务器仍然是 3 字符起的模糊搜索。
+- 国服只支持精确昵称搜索（`one: true`），输入不完整时上游返回 HTTP 400（`code: 540`），
+  客户端把它当作「无结果」；其他服务器仍然是 3 字符起的模糊搜索。
+- 服务端只为观察过的账号保留每日记录，少于两天时趋势图不画；每日记录失败不能影响玩家页。
+- 不做离线缓存：评分、舰船名称、图标全部来自服务端，收藏是唯一的本地用户数据。
 
-## 实现要点
+## 跨平台约定
 
-- **Swift 6 / 严格并发**：`YuyukoClient` 是 `Sendable` 值类型，ViewModel 使用 `@MainActor @Observable`。
-- **取消与防抖**：搜索框每次变化通过 `.task(id:)` 取消上一次请求，等待 350ms 后请求；网络返回后检查 `Task.isCancelled` 和请求 key，避免旧结果覆盖新结果。请求 key 用去掉首尾空白的昵称，只改空白不会触发新请求。
-- **错误口径**：`URLSession` 的 `URLError.cancelled` 在 `YuyukoClient` 里统一转成 `CancellationError`，页面切换不会弹出错误；HTTP 404 / 405 统一映射为 `notFound`，和信封里 `code` 的语义保持一致。
-- **并发加载**：玩家总览、战舰列表和每日记录用 `async let` 并发请求；玩家首次查询约 6–8 秒（服务端要回源 Wargaming），命中缓存后 0.3–0.6 秒，所以超时设为 30 秒。
-- **一次成型**：三个请求都返回后才构建 `PlayerReport`，不再有「总览先出、百科后到」的中间态。每日记录例外：`recentDays` 不抛错，失败就当作「没有记录」，页面照常显示。
-- **玩家页头像**：昵称左侧显示 `userInfo.dogTag`。它是服务端给的 190×190 PNG 直链，没有该字段或取不到图时显示占位暗块，所以模型里存成 `AccountInfo.dogTagURL`。
-- **战斗类型切换**：`PlayerReport` 按 `BattleMode` 保存总览、评分和最高记录，战舰保存每艘舰的 `[BattleMode: ModeStats]`。玩家页用菜单式 `BattleModePicker` 切换，未选中时回退到`defaultMode`（有随机战用随机战，否则用第一个有数据的类型）。
-- **图表**：玩家页有两张卡，都跟随当前战斗类型。①「近期趋势」用 Swift Charts 折线 + 面积画 `account/day/list/info` 的 `recentInfo`（每天一条当天战绩），在评分 / 胜率之间切换；面积的基线必须显式写成 y 轴下界（`AreaMark(yStart:yEnd:)`），默认基线是图表 frame 底部，会盖住日期轴并溢出卡片；少于两天不画（一个点不是趋势），x 轴按整天取刻度避免同一天出现两个日期标签，胜率会把刻度略微放出 0–100 之外，免得 0% / 100% 的点被裁掉。②「评分分布」取 `info2` 的 `shipTypeInfo` / `levelInfo`，在舰种 / 等级之间切换；这张卡是自绘的条形行而不是 Swift Charts 的横向条形图——iOS 26 上分类轴的标签会画进绘图区、和条形重叠。两张卡的选中项存在 `PlayerView` 里，因为 `LazyVStack` 回收卡片时会丢掉卡片自己的 `@State`。没有数据的卡片整张隐藏，所以服务端没记录过的账号（`code: 412 无recent记录`）只会少一张卡，不会看到空图。
-- **没有本地缓存**：评分、舰船名称、图标全部来自服务端，App 不再打包期望值数据，也不再往 Caches 里写百科 JSON。
-- **收藏**：`FavoritesStore` 是 `@MainActor @Observable`，通过 `@Environment` 注入所有页面；收藏列表以 JSON 存入 `UserDefaults`，并在 `PrivacyInfo.xcprivacy` 中声明 `NSPrivacyAccessedAPICategoryUserDefaults`（CA92.1）。顺序由用户手动拖动决定。
-- **收藏列表没有编辑态**：首页右上角「⋯」菜单只有导入 / 导出，没有「编辑」开关，列表也不进 `EditMode`。删除靠左滑（`swipeActions` 里的 `star.slash`，没有用 `onDelete`），排序靠长按行直接拖动（`ForEach.onMove`）。收藏行和搜索结果一样是 `NavigationLink(value:)` + `playerCell()`，所以 `NavigationStack` 不需要 `path` 绑定。
-- **收藏导入 / 导出**：`FavoritesArchive` 是分享用的 JSON（`version` / `exportedAt` / `players`），通过 `ShareLink` 交给系统分享面板（存到「文件」、AirDrop、邮件都行）写入，读取用 `.fileImporter`（只接受 `.json`）。只认导出格式本身，读不懂就提示导入失败——不保留任何旧格式 / 裸数组的兼容解析。
-- **导入语义**：`FavoritesStore.importArchive(_:)` 是「追加合并」而不是「覆盖」：已存在（同 `accountId` + 同 `server`）的条目跳过，新的追加到末尾并保留现有顺序，返回 `ImportSummary(added:skipped:)` 供弹窗提示。这样导入永远不会删掉本机已有的收藏。
-- **字体**：字号统一走 `Theme.swift` 里的语义化 `Font` token（`statLabel` / `statValue` / `detailValue` / `rowSubtitle` / `rowChevron` / `ratingValue` / `ratingTier`），全部基于 text style 以跟随 Dynamic Type。可读文字最小用 `footnote`（默认 13pt）；`caption` / `caption2` 在默认尺寸下只有 12pt / 11pt，除图标外不再使用。层级靠字重和颜色区分，不靠缩小字号，`minimumScaleFactor` 不要低于 0.8。
-- **多语言**：`L10n.swift` 只声明语义化 key，文案（含英文）全部只存在 `Localizable.xcstrings` 里，同一个标签不需要在两个地方各写一遍；`String(localized:)` 自动跟随系统语言，没有 App 内切换开关。key 在 catalog 里缺失时会直接显示 key 本身，等于把漏翻译暴露出来。App 名称由 `InfoPlist.xcstrings` 本地化；战舰名称语言由 `AppConfig.shipNameLanguage` 跟随。
+### 收藏文件
 
-## 多语言与新增语言
+两端使用同一份版本化 JSON 信封，扩展名 `.json`，`version` 目前是 `1`：
 
-界面语言由 iOS 根据系统语言自动选择，代码中没有任何语言切换开关：
-
-- 系统为简体中文 → 界面中文，战舰名称为 `nameCn`
-- 系统为繁体中文 → 界面繁体中文，战舰名称同样用 `nameCn`（接口只提供简体舰名）
-- 系统为英文 → 界面英文，战舰名称为 `nameEnglish`
-- 系统为日语 / 韩语 → 界面日语 / 韩语，战舰名称回退为 `nameEnglish`（接口没有日 / 韩舰名）
-- 其他系统语言 → 由 iOS 回退到英文或中文，战舰名称与回退后的界面保持一致
-- 国服（`cn`）优先用 360 的译名 `nameCn360`（例如「鲸」而不是「大和」），其他服务器用 `nameCn`
-
-### 新增一种语言
-
-1. 在 `Localizable.xcstrings` 中添加语言（例如 `de`），翻译全部 key。每个 key 都有注释说明使用场景；格式字符串中的 `%1$@`、`%2$@` 等占位符不要删除或调序。
-2. 在 `InfoPlist.xcstrings` 中添加同一语言的 `CFBundleDisplayName`（桌面显示名称）。
-3. 在 `WoWsInsight.xcodeproj/project.pbxproj` 的 `knownRegions` 里加上该语言码。
-4. 如果新语言需要自己的舰名（接口目前只提供中 / 英 / 俄三种），在 `ShipNameLanguage`和 `YuyukoShipMeta.name(language:server:)` 中扩展。
-5. 用 Xcode 打开工程时如果新语言没有出现在 Project → Info → Localizations 中，把它加进去。
-
-因为所有文案都走 `L10n.swift` + String Catalog，人工翻译或让 AI 翻译都只需要处理这两个 `.xcstrings` 文件，不需要改 View 代码。新增用户可见文案时：先在 `L10n.swift` 加 key，
-**同时**在 `Localizable.xcstrings` 补上 en 和其余全部语言（目前是 en / ja / ko / zh-Hans / zh-Hant）——代码里没有英文兜底，漏掉 key 的界面会直接显示原始 key。
-
-## 构建与验证
-
-工程没有单元测试 target，验证方式是编译；需要看界面时再手动走一遍主要流程。
-CI 只有一个 Release 工作流，不跑测试，只负责编译打包。
-
-> 功能变更后默认只做类型检查和 `xcodebuild` 构建。**如需启动模拟器（`simctl boot` /
-> `install` / `launch`、截图等）验证，先征求用户同意**，不要自行开启；需要看真实界面时，
-> 走下面的 Pinky 流程装到用户的真机上。
-
-```sh
-# 指定 Xcode（xcode-select 指向 CommandLineTools 时必需）
-export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
-
-# 类型检查
-swiftc -typecheck -swift-version 6 -sdk "$SDK" -target arm64-apple-ios18.0-simulator \
-  $(find WoWsInsight -name '*.swift')
-
-# 构建
-xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight \
-  -destination 'generic/platform=iOS Simulator' build
+```json
+{
+  "version": 1,
+  "exportedAt": "2026-11-12T04:27:22Z",
+  "players": [
+    { "accountId": 3002439652, "nickname": "Yamato", "server": "asia" }
+  ]
+}
 ```
 
-> 本机的 DSH 文件沙盒会阻止 Xcode 的 Swift 宏插件子进程；命令行构建时加了
-> `OTHER_SWIFT_FLAGS='-Xfrontend -disable-sandbox'`。正常用 Xcode IDE 构建不需要这个参数。
+- `exportedAt` 截断到整秒：Foundation 的 `.iso8601` 解码器不接受小数秒。
+- 导入语义是「追加合并」：已存在（同 `accountId` + 同 `server`）的条目跳过，新的追加到末尾，
+  保留本机现有顺序，**导入永远不能删除本地收藏**。
+- 只认这个格式本身，不保留旧格式 / 裸数组的兼容解析；读不懂就提示导入失败。
+- iOS 存在 `UserDefaults`，Android 存在 Preferences DataStore 的 `favorites.players` 键。
+- 修改格式时必须同时改两端、Android 的 `FavoritesArchiveTest` / iOS 的导入导出逻辑，以及
+  [`.agents/skills/wows-favorites-archive/SKILL.md`](./.agents/skills/wows-favorites-archive/SKILL.md)。
 
-### 真机调试（Pinky）
+### 多语言
 
-用 Pinky 的 `phone_*` 工具把 Debug 构建装到用户 iPhone 上看真实界面。一个「改 → 装 → 看」
-循环约 1–2 分钟，所以尽量一次改完再装。
+两端都提供简体中文 / 繁体中文 / 英语 / 日语 / 韩语，界面语言跟随系统，App 内没有切换开关。
+iOS 的 `Localizable.xcstrings` 是所有用户可见文案的唯一来源，Android 资源由脚本生成；新增或
+修改文案时先改 iOS 的 String Catalog，再运行 Android 的生成脚本，不能手改生成的
+`values*/strings.xml`。跨平台的完整步骤与新增语言清单见
+[`.agents/skills/wows-localization/SKILL.md`](./.agents/skills/wows-localization/SKILL.md)。
 
-```sh
-# 1. UDID：xcrun devicectl list devices，取 physical 设备的 Identifier
-# 2. 打包（自动签名，-allowProvisioningUpdates 缺了会报没有描述文件）
-xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight -configuration Debug \
-  -destination 'platform=iOS,id=<UDID>' -derivedDataPath /tmp/wows-device \
-  -allowProvisioningUpdates build OTHER_SWIFT_FLAGS='-Xfrontend -disable-sandbox'
-# 3. 确认签名与版本
-codesign -d --entitlements :- /tmp/wows-device/Build/Products/Debug-iphoneos/WoWsInsight.app
-/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
-  /tmp/wows-device/Build/Products/Debug-iphoneos/WoWsInsight.app/Info.plist
-```
+战舰名称规则两端一致：
 
-- 装：把 `WoWsInsight.app` 整个目录复制进 Pinky 的电脑端文件夹（`phone_files {}` 会打印路径，
-  macOS 上是 `~/Library/Application Support/Pinky/files/<UDID>`，iPhone 本身没有 Pinky 目录），
-  再 `phone_app { action: "install", paths: ["WoWsInsight.app"] }`。覆盖安装保留 UserDefaults
-  里的收藏；版本不能比已装的低，同版本可以反复装。
-- 手机锁屏会返回 `device_locked`，要 `phone_handoff` 让用户解锁；`phone_app stop` 不需要审批，
-  用来验证「冷启动后的持久化」（退出再 `phone_launch`，收藏顺序/数据应保持）。
-- **这个 App 的界面几乎全是 SwiftUI 自绘文本，元素树是空的**，一律用
-  `phone_observe { ocr: true }` 读文字，按 OCR 坐标点。
-- **排版问题只能靠截图看**：重叠、溢出、裁切在 OCR 里看不出来。用
-  `phone_observe { save: "x.png" }` 存图，再用 `sips -c <高> <宽> --cropOffset <y> 0 x.png --out c.png`
-  裁出局部放大检查（截图是 3x，OCR 坐标就是截图像素）。
-- 返回上一页后列表位置会变，操作前重新 `observe` 再取坐标；`phone_swipe` 只能二选一：
-  `direction` 或 `from`+`to`，同时给会报 `invalid_argument`。
-- 长按拖动排序用 `phone_drag`（`hold_ms` 至少 800 才能把行拿起来），`via` 给中间点、
-  `pause_ms` 松手前停一下；`phone_swipe` 只会滚动。
-- `phone_batch` 里只放 tap / type / swipe / launch 这类界面动作（`phone_app` 放进去会报参数错误），
-  且遇到第一个非 settled 的步骤就停，剩下的步骤要另起一批。
-- `phone_type` 返回 `uncertain`（「没有焦点」）时先 `observe`，文字可能已经输进去了，别盲目重打。
-- 会改数据的操作要能撤回：左滑只滑一半、看到「取消收藏」就点空白关掉；拖动排序后拖回原位，
-  收尾时用 OCR 核对顺序；导入 / 导出只确认面板能弹出，然后点面板外关闭，不要真的写文件。
-- 日志：iPhone 上 `phone_logs` 没有历史，第一次调用才开始监听，所以按「调用一次 → 复现 →
-  再调用（`since: "5m"`）」的顺序取；不要传 `kind`（传 `"logs"` 会被 MCP 以
-  `invalid_argument` 拒绝），输出过大时按关键字 grep（本 App 的请求主机是
-  `v3-api.wows.shinoaki.com`）。
-- 收尾：`phone_release`，并删掉 `/tmp/wows-device` 和 Pinky 文件夹里的截图。
+- 系统为简体中文 → `nameCn`
+- 系统为繁体中文 → 界面繁体，舰名仍用 `nameCn`（接口只提供简体舰名）
+- 系统为英文 → `nameEnglish`
+- 系统为日语 / 韩语 → 界面日 / 韩语，舰名回退为 `nameEnglish`
+- 其他系统语言 → 跟随界面回退结果
+- 国服（`cn`）优先使用 360 译名 `nameCn360`（例如「鲸」而不是「大和」），其他服务器用 `nameCn`
+
+### 数值类型
+
+- 账号 ID、战舰 ID 是 64 位，Android 端必须用 `Long`（现有亚服账号 ID 已超过 `Int.MAX_VALUE`），
+  iOS 端用 `Int64` 语义的 `Int`。
+- 生涯总计可能超过 `Int.MAX_VALUE`（潜在伤害最常见），伤害 / 经验 / 潜在伤害 / 侦查伤害等
+  总量与记录值要用 64 位，单场次数保持 32 位。
 
 ## 发布
 
-`.github/workflows/release.yml` 是**手动触发**的（Actions → Release → Run workflow），
-归档、打包成未签名 IPA，并在 GitHub Releases 里建标签和 Release。
+[`.github/workflows/release.yml`](./.github/workflows/release.yml) 是**手动触发**的
+（Actions → Release → Run workflow），一次构建两个平台，并发布到同一个 GitHub Release：
 
-- 跑在 `xcode-27` 镜像上，用 Xcode 27 / iOS 27 SDK 构建。**不要退回旧镜像**：用 iOS 18 SDK
-  构建的包在 iOS 26+ 上会走兼容外观，界面和本地用 Xcode 27 构建的不一致（`xcode-27`
-  目前是 preview 标签，GA 后换成 `macos-27`）。
-- `version` 输入就是发布版本号（可带 `v` 前缀），例如 `1.0.1` → 标签 `v1.0.1`；
-  同时用 `MARKETING_VERSION=1.0.1` 覆盖工程里的版本号，`CURRENT_PROJECT_VERSION` 用 run number。
-- `version` 留空时用工程的 `MARKETING_VERSION`；标签已存在会直接报错，需要换一个版本号。
-- Release 说明由「如何安装」+ GitHub 自动生成的变更日志（`--generate-notes`）组成，
-  所以 checkout 用了 `fetch-depth: 0`。
-- 产物是 `WoWsInsight-<version>.ipa`（`Payload/WoWsInsight.app`），同时上传成 Actions artifact；
-  IPA **不签名**（`CODE_SIGNING_ALLOWED=NO`），使用者需要自己用 AltStore / Sideloadly / Xcode 重签。
+- `version` 输入是发布版本号（可带 `v` 前缀），例如 `1.0.1` → 标签 `v1.0.1`。留空时使用
+  iOS 工程的 `MARKETING_VERSION`，Android 的 `versionName` 也使用同一个值。
+- `versionCode` / `CURRENT_PROJECT_VERSION` 统一使用 workflow 的 run number。
+- 标签已存在会直接报错，需要换一个版本号。
+- 产物是 `WoWsInsight-<version>.ipa` 和 `WoWsInsight-<version>.apk`；iOS IPA **不签名**，
+  需要使用者自己重签，Android APK 由 CI 用仓库里配置的 keystore **签名后发布**。
+  两个文件同时上传成 Actions artifact。Release 说明由「如何安装」+ `--generate-notes` 的
+  变更日志组成。
+- Android 签名需要四个 repository secrets：`ANDROID_KEYSTORE_BASE64`、
+  `ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`；缺失时 Android
+  job 会直接失败，不会产出未签名包。本地把同样的信息填进 `android/keystore.properties`
+  （模板 `keystore.properties.example`，已被 gitignore）后直接 `assembleRelease` 即可签名；
+  CI 通过环境变量注入，优先级高于 properties。
+- 发布需要仓库在 Settings → Actions → General → Workflow permissions 里允许
+  **Read and write permissions**，否则 `gh release create` 会因为没有写权限失败。
 
-> **重签名必须让描述文件的 App ID 等于 `PRODUCT_BUNDLE_IDENTIFIER`。** 重签工具会用描述文件里的
-> `Entitlements` 覆盖整个 App（CI 产物本身一个 entitlement 都没有），而 `application-identifier`
-> 必须是 `<TeamID>.<BundleID>`。用别的 App ID 的 profile 签出来的 App 能启动、界面正常，但
-> 文档选择器发出的沙盒扩展落不到 App 上——`.fileImporter` 会拿不到可读的 URL（表现为「选了文件
-> 没反应」），iCloud Drive 的文件也会卡在同步。检查方法：`codesign -d --entitlements :- Payload/WoWsInsight.app`
-> 里 `application-identifier` 的后缀要等于 `CFBundleIdentifier`。
+iOS 的镜像/签名注意事项见 [ios/AGENTS.md](./ios/AGENTS.md)，Android 的版本覆盖和产物路径
+见 [android/AGENTS.md](./android/AGENTS.md)；发布 / 签名 / 版本号的完整检查清单见
+[`.agents/skills/wows-release/SKILL.md`](./.agents/skills/wows-release/SKILL.md)。
 
-> 仓库需要在 Settings → Actions → General → Workflow permissions 里允许
-> **Read and write permissions**，否则 `gh release create` 会因 `GITHUB_TOKEN` 没有写权限而失败。
+## 文档维护
+
+文档按平台拆分，避免两个平台的内容互相污染：
+
+- 根 `README.md`：只放仓库总览、平台索引、两个平台共用的功能 / 评分 / 限制 / 声明。
+  不写某一平台的构建命令或界面细节。
+- `ios/README.md`、`android/README.md`：用户视角的平台文档（运行、构建、发布、平台限制）。
+- 根 `AGENTS.md`：共享接口口径、收藏格式、发布流程、文档规则。
+- `ios/AGENTS.md`、`android/AGENTS.md`：该平台的实现细节、代码约定、调试方法。
+- `.agents/skills/<name>/SKILL.md`：跨平台的多步流程（目前有 `wows-localization`、
+  `wows-app-icon`、`wows-favorites-archive`、`wows-release`、`wows-yuyuko-api`），配套脚本放在
+  同名目录的 `scripts/` 下。写流程而不是重复平台细节，平台细节仍然放在对应的 `AGENTS.md`。
+
+改动用户可见行为时，同时更新对应平台的 `README.md`；改动实现约定时更新对应的
+`AGENTS.md`；改动接口、收藏格式或多语言流程时同时检查相关 skill。新增平台时创建
+`<platform>/README.md` 和 `<platform>/AGENTS.md`，在根 README 的平台表和本文件的文档索引里
+登记，并在发布工作流里增加对应 job 与产物。
 
 ## 后续可扩展方向
 
 - 收藏分组、按名称 / 评分自动排序
 - 排位赛季与成就
+- 两个平台之间的界面 / 功能差异持续收敛

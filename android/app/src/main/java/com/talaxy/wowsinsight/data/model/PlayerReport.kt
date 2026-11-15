@@ -1,0 +1,164 @@
+package com.talaxy.wowsinsight.data.model
+
+import java.text.Collator
+import java.time.LocalDate
+import java.util.Locale
+
+/** A player returned by the account search endpoint. */
+data class PlayerSummary(
+    val accountId: Long,
+    val nickname: String,
+)
+
+/** Account details shown on the player header card. */
+data class AccountInfo(
+    val accountId: Long,
+    val nickname: String,
+    val createdAt: Int?,
+    val lastBattleTime: Int?,
+    /** Absolute URL of the in-game dog tag image. */
+    val dogTagUrl: String?,
+)
+
+/** The account overview returned by `account/user/info2`, split per mode. */
+data class AccountOverview(
+    val account: AccountInfo,
+    val modes: Map<BattleMode, ModeStats>,
+    val shipTypes: List<CategoryStats>,
+    val tiers: List<CategoryStats>,
+)
+
+/** One category of `shipTypeInfo` or `levelInfo`. */
+sealed interface CategoryKey {
+    data class ShipType(val code: String) : CategoryKey
+    data class Tier(val tier: Int) : CategoryKey
+}
+
+data class CategoryStats(
+    val key: CategoryKey,
+    val modes: Map<BattleMode, ModeStats>,
+) {
+    val sortOrder: Int
+        get() = when (key) {
+            is CategoryKey.ShipType ->
+                ShipInfo.TYPE_ORDER.indexOf(key.code).takeIf { it >= 0 } ?: ShipInfo.TYPE_ORDER.size
+            is CategoryKey.Tier -> key.tier
+        }
+}
+
+/** One day of the recently recorded battles of `account/day/list/info`. */
+data class DailyStats(
+    /** Exact record time in epoch milliseconds; unique per record. */
+    val recordedAt: Long,
+    /** Local calendar day the record was taken on. */
+    val day: LocalDate,
+    val modes: Map<BattleMode, ModeStats>,
+)
+
+/** Per-ship data assembled from `account/ship/info/list`. */
+data class ShipStat(
+    val ship: ShipInfo,
+    val modes: Map<BattleMode, ModeStats>,
+)
+
+/**
+ * Everything the detail screen needs, assembled once after loading.
+ *
+ * Totals, ratings and records are kept per battle type; the screen shows one
+ * type at a time and defaults to random battles.
+ */
+data class PlayerReport(
+    val account: AccountInfo,
+    /** Battle types with at least one battle, in picker order. */
+    val modes: List<BattleMode>,
+    val modeStats: Map<BattleMode, ModeStats>,
+    val modeRecords: Map<BattleMode, List<BattleRecord>>,
+    val ships: List<ShipPerformance>,
+    /** Days recorded by the service, oldest first. */
+    val dailyStats: List<DailyStats>,
+    val shipTypes: List<CategoryStats>,
+    val tiers: List<CategoryStats>,
+) {
+    /** Random battles when available, otherwise the first mode with battles. */
+    val defaultMode: BattleMode?
+        get() = if (modes.contains(BattleMode.PVP)) BattleMode.PVP else modes.firstOrNull()
+
+    fun stats(forMode: BattleMode): ModeStats? = modeStats[forMode]
+
+    fun records(forMode: BattleMode): List<BattleRecord> = modeRecords[forMode].orEmpty()
+
+    /** The recorded days that fought [mode], which is what the trend plots. */
+    fun dailyStats(forMode: BattleMode): List<DailyStats> =
+        dailyStats.filter { (it.modes[forMode]?.stats?.battleCount ?: 0) > 0 }
+
+    /** The categories that fought [mode], in chart order. */
+    fun categories(breakdown: ChartBreakdown, forMode: BattleMode): List<CategoryStats> {
+        val source = if (breakdown == ChartBreakdown.SHIP_TYPE) shipTypes else tiers
+        val collator = Collator.getInstance(Locale.getDefault())
+        return source
+            .filter { (it.modes[forMode]?.stats?.battleCount ?: 0) > 0 }
+            .sortedWith { left, right ->
+                if (left.sortOrder == right.sortOrder) {
+                    collator.compare(left.key.toString(), right.key.toString())
+                } else {
+                    left.sortOrder.compareTo(right.sortOrder)
+                }
+            }
+    }
+
+    companion object {
+        fun create(
+            overview: AccountOverview,
+            shipStats: List<ShipStat>,
+            dailyStats: List<DailyStats>,
+        ): PlayerReport {
+            // Every ship goes into the catalog, not only those with visible
+            // stats, so a record can always name the ship it was achieved on.
+            val catalog = shipStats.associate { it.ship.shipId to it.ship }
+            val played = overview.modes.filterValues { it.stats.battleCount > 0 }
+            val modes = BattleMode.entries.filter { played.containsKey(it) }
+
+            return PlayerReport(
+                account = overview.account,
+                modes = modes,
+                modeStats = played,
+                modeRecords = played.mapValues { (_, stats) ->
+                    BattleRecords.list(stats.stats, catalog)
+                },
+                ships = shipStats.map { ShipPerformance(it.ship, it.modes) },
+                dailyStats = dailyStats,
+                shipTypes = overview.shipTypes,
+                tiers = overview.tiers,
+            )
+        }
+    }
+}
+
+/**
+ * Ships that actually fought in [mode], sorted by [sort] with the ship name as
+ * a stable tie-break.
+ */
+fun List<ShipPerformance>.ranked(mode: BattleMode, sort: ShipSort): List<ShipPerformance> {
+    val collator = Collator.getInstance(Locale.getDefault())
+    fun score(stats: ModeStats): Double = when (sort) {
+        ShipSort.BATTLES -> stats.stats.battleCount.toDouble()
+        ShipSort.WIN_RATE -> stats.stats.winRate
+        ShipSort.AVERAGE_DAMAGE -> stats.stats.averageDamage
+        ShipSort.RATING -> stats.rating.value.toDouble()
+        ShipSort.LAST_BATTLE -> (stats.lastBattleTime ?: 0).toDouble()
+    }
+
+    return mapNotNull { ship ->
+        val stats = ship.modes[mode] ?: return@mapNotNull null
+        if (stats.stats.battleCount <= 0) return@mapNotNull null
+        ship to stats
+    }.sortedWith { left, right ->
+        val leftScore = score(left.second)
+        val rightScore = score(right.second)
+        if (leftScore == rightScore) {
+            collator.compare(left.first.ship.name, right.first.ship.name)
+        } else {
+            rightScore.compareTo(leftScore)
+        }
+    }.map { it.first }
+}

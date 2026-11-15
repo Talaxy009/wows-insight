@@ -1,22 +1,40 @@
 <p align="center">
-  <img alt="Logo" src="./WoWsInsight/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="80" />
+  <img alt="Logo" src="./ios/WoWsInsight/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="80" />
 </p>
 <h1 align="center">
   WoWs Insight
 </h1>
 <p align="center">
-  一个原生的 iOS 端战舰世界战绩查询工具。
+  《战舰世界》战绩查询工具，提供原生的 iOS 与 Android 客户端。
 </p>
+
+## 平台
+
+| 平台 | 技术栈 | 系统要求 | 文档 |
+| --- | --- | --- | --- |
+| iOS | Swift 6 · SwiftUI · Observation | iOS 18.0+ | [ios/README.md](./ios/README.md) |
+| Android | Kotlin · Jetpack Compose · Material 3 | Android 8.0（API 26）及以上 | [android/README.md](./android/README.md) |
+
+两个客户端功能对齐、共用同一套 Yuyuko 接口，收藏的 JSON 导出格式也完全互通，可以在 iOS
+与 Android 之间互相导入。
+
+## 下载
+
+[Releases](https://github.com/Talaxy009/wows-insight/releases) 里每次发布会同时提供两个安装包：
+
+- `WoWsInsight-<版本>.ipa`（iOS）：未签名，需要用自己的证书通过 AltStore / Sideloadly / Xcode 重签。
+- `WoWsInsight-<版本>.apk`（Android）：已签名，可直接安装。
 
 ## 功能
 
 - 在俄服 / 欧服 / 美服 / 亚服 / 国服之间切换
-- 按昵称搜索玩家
+- 按昵称搜索玩家，国服使用接口的精确匹配模式
 - 玩家总览
   - 按战斗类型（随机战 / 排位战 / 联合作战 / 公会战 …）切换，默认显示随机战
   - 胜率、战斗场数、平均伤害、平均击杀、平均经验、生存率
   - 详细数据：胜负平、总伤害、总经验、命中率、KD、潜在伤害、侦查伤害、侦测、击落飞机等
-  - 最高记录：最高伤害、最多击杀、最多经验、最多击落飞机、最多侦测、最大潜在伤害、最大侦查伤害，并显示对应的战舰
+  - 最高记录：最高伤害、最多击杀、最多经验、最多击落飞机、最多侦测、最大潜在伤害、
+    最大侦查伤害，并显示对应的战舰
   - 个人评分
   - 图表：近期每日评分 / 胜率趋势（服务端有记录时），以及按舰种 / 按等级的评分分布
 - 战舰列表
@@ -24,17 +42,33 @@
   - 显示战舰等级、类型、场数、胜率、个人评分、平均伤害
   - 点进单艘战舰查看同样的统计与记录
 - 收藏
-  - 玩家页右上角星标可收藏 / 取消收藏
-  - 搜索结果的左滑菜单也可以直接收藏
-  - 收藏的账号会显示在首页，左滑可取消收藏，长按行可拖动调整顺序
-  - 同一个「⋯」菜单可以把收藏导出成 JSON 文件，或在另一台设备上导入
-- 多语言，包括：简体中文 / 繁體中文 / English / 日本語 / 한국어
+  - 星标收藏 / 取消收藏，搜索结果里也能直接收藏
+  - 调整顺序（iOS 长按拖动，Android 使用拖动手柄，并提供 TalkBack 上移 / 下移操作）
+  - 把收藏导出成 JSON，或在另一台设备（含另一个平台）上导入
+- 多语言：简体中文 / 繁體中文 / English / 日本語 / 한국어
 
-## 运行
+## 仓库结构
 
-- 需要 iOS 18.0+ 的设备或模拟器；源码需要用 Xcode 16 或更新版本自行构建。
-- 在 Target → Signing & Capabilities 里选择自己的 Team，按需修改 Bundle Identifier 后运行。
-- 也可以直接从 [Releases](https://github.com/Talaxy009/wows-insight/releases) 下载 `.ipa`，用自己的证书重新签名后安装（Release 里的 IPA 未签名）。
+```txt
+.
+├── ios/                          # 原生 iOS 客户端（Swift / SwiftUI）
+│   ├── README.md
+│   ├── AGENTS.md
+│   ├── WoWsInsight.xcodeproj
+│   └── WoWsInsight/
+├── android/                      # 原生 Android 客户端（Kotlin / Compose）
+│   ├── README.md
+│   ├── AGENTS.md
+│   ├── app/
+│   ├── docs/
+│   └── icon.svg                  # 应用图标源文件
+├── .agents/skills/               # 可复用流程：多语言、应用图标、收藏、发布、接口
+├── .github/workflows/            # 手动触发的发布流水线（IPA + APK）
+├── README.md                     # 本文件：仓库总览与共用说明
+└── AGENTS.md                     # 面向开发者的仓库级说明
+```
+
+平台各自的运行、构建和发布细节见对应目录的 README；仓库级开发说明见 [AGENTS.md](./AGENTS.md)。
 
 ## 个人评分怎么看
 
@@ -56,11 +90,12 @@
 ## 已知限制
 
 - 收藏只保存在本机，没有云同步和自动备份；卸载 App 会丢失，需要手动导出 JSON 备份。
-- 目前提供简体中文、繁体中文、英语、日语和韩语五种界面语言；其他语言未单独翻译，由 iOS 自动回退。
+- 目前提供简体中文、繁体中文、英语、日语和韩语五种界面语言；其他语言由系统回退。
 - 接口只提供简体的战舰译名，所以繁体中文界面里的舰名仍是简体；日语和韩语界面里的舰名显示英文名。
 - 只支持玩家昵称搜索，不支持按账号 ID 直接搜索；国服（360）只支持完整昵称精确匹配。
 - 隐藏战绩的账号只能显示昵称和注册 / 最后战斗时间。
 - 未查询过的玩家首次打开需要 6–8 秒（服务端要回源拉取数据），之后同一玩家会快很多。
+- Yuyuko 是社区服务，没有 SLA；接口异常时页面会提示重试。
 
 ## 声明
 
