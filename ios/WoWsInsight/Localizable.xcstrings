@@ -3860,31 +3860,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Search player nickname (min. 3 characters)"
+            "value" : "Search player nickname"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "プレイヤーニックネームを検索（3 文字以上）"
+            "value" : "プレイヤーニックネームを検索"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "플레이어 닉네임 검색 (3자 이상)"
+            "value" : "플레이어 닉네임 검색"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "输入玩家昵称（至少 3 个字符）"
+            "value" : "输入玩家昵称"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "輸入玩家暱稱（至少 3 個字元）"
+            "value" : "輸入玩家暱稱"
           }
         }
       }

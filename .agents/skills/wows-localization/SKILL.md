@@ -27,7 +27,7 @@ XML 会让两端文案漂移。
    python .agents/skills/wows-localization/scripts/generate_strings.py
    ```
 
-3. Android 独有的无障碍 / 平台文案（TalkBack 标签、拖动排序提示等）加到脚本顶部的 `EXTRA`
+3. Android 独有的无障碍 / 平台文案（TalkBack 标签等）加到脚本顶部的 `EXTRA`
    字典，五种语言齐全；key 与 catalog 生成结果重名时脚本会直接报错。
 4. 校验改动范围：`git diff --stat` 只应出现预期的 `Localizable.xcstrings` / `L10n.swift` /
    `strings.xml`（生成文件的头部注释会带脚本新路径）；需要时再跑 `./gradlew :app:lintDebug`。

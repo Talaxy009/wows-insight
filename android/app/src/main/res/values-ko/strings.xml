@@ -114,7 +114,6 @@
     <string name="search_favorites_move_down">아래로 이동</string>
     <string name="search_favorites_move_up">위로 이동</string>
     <string name="search_favorites_reorder">즐겨찾기 순서 변경</string>
-    <string name="search_favorites_reorder_hint">왼쪽 핸들을 드래그하여 순서 변경</string>
     <string name="search_import">즐겨찾기 가져오기</string>
     <string name="search_import_done_title">가져오기 완료</string>
     <string name="search_import_failed_message">이 파일은 WoWs Insight에서 내보낸 즐겨찾기 파일이 아닙니다.</string>
@@ -123,7 +122,7 @@
     <string name="search_import_summary">즐겨찾기 %1$d개를 가져왔습니다. %2$d개는 이미 저장되어 있습니다.</string>
     <string name="search_no_results_message">“%1$s”와 일치하는 플레이어가 없습니다.</string>
     <string name="search_no_results_title">결과 없음</string>
-    <string name="search_prompt">플레이어 닉네임 검색 (3자 이상)</string>
+    <string name="search_prompt">플레이어 닉네임 검색</string>
     <string name="search_results_header">검색 결과</string>
     <string name="search_searching">검색 중…</string>
     <string name="search_server_selector">서버 선택</string>

@@ -114,7 +114,6 @@
     <string name="search_favorites_move_down">Move down</string>
     <string name="search_favorites_move_up">Move up</string>
     <string name="search_favorites_reorder">Reorder favorites</string>
-    <string name="search_favorites_reorder_hint">Drag the handle to reorder</string>
     <string name="search_import">Import favorites</string>
     <string name="search_import_done_title">Import complete</string>
     <string name="search_import_failed_message">This file is not a favorites export from WoWs Insight.</string>
@@ -123,7 +122,7 @@
     <string name="search_import_summary">Added %1$d favorites. %2$d were already saved.</string>
     <string name="search_no_results_message">No player matches “%1$s”.</string>
     <string name="search_no_results_title">No results</string>
-    <string name="search_prompt">Search player nickname (min. 3 characters)</string>
+    <string name="search_prompt">Search player nickname</string>
     <string name="search_results_header">Search results</string>
     <string name="search_searching">Searching…</string>
     <string name="search_server_selector">Select server</string>

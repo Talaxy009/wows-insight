@@ -114,7 +114,6 @@
     <string name="search_favorites_move_down">下へ移動</string>
     <string name="search_favorites_move_up">上へ移動</string>
     <string name="search_favorites_reorder">お気に入りを並べ替え</string>
-    <string name="search_favorites_reorder_hint">左のハンドルをドラッグして並べ替え</string>
     <string name="search_import">お気に入りを読み込む</string>
     <string name="search_import_done_title">読み込みが完了しました</string>
     <string name="search_import_failed_message">このファイルは WoWs Insight が書き出したお気に入りではありません。</string>
@@ -123,7 +122,7 @@
     <string name="search_import_summary">%1$d 件のお気に入りを読み込みました。%2$d 件は既に保存されています。</string>
     <string name="search_no_results_message">「%1$s」に一致するプレイヤーは見つかりませんでした。</string>
     <string name="search_no_results_title">結果なし</string>
-    <string name="search_prompt">プレイヤーニックネームを検索（3 文字以上）</string>
+    <string name="search_prompt">プレイヤーニックネームを検索</string>
     <string name="search_results_header">検索結果</string>
     <string name="search_searching">検索中…</string>
     <string name="search_server_selector">サーバーを選択</string>

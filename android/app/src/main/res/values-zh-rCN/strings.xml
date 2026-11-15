@@ -114,7 +114,6 @@
     <string name="search_favorites_move_down">下移</string>
     <string name="search_favorites_move_up">上移</string>
     <string name="search_favorites_reorder">调整收藏顺序</string>
-    <string name="search_favorites_reorder_hint">拖动左侧手柄调整顺序</string>
     <string name="search_import">导入收藏</string>
     <string name="search_import_done_title">导入完成</string>
     <string name="search_import_failed_message">这个文件不是 WoWs Insight 导出的收藏文件。</string>
@@ -123,7 +122,7 @@
     <string name="search_import_summary">已导入 %1$d 个收藏，%2$d 个已存在。</string>
     <string name="search_no_results_message">没有找到与“%1$s”匹配的玩家。</string>
     <string name="search_no_results_title">没有结果</string>
-    <string name="search_prompt">输入玩家昵称（至少 3 个字符）</string>
+    <string name="search_prompt">输入玩家昵称</string>
     <string name="search_results_header">搜索结果</string>
     <string name="search_searching">搜索中…</string>
     <string name="search_server_selector">选择服务器</string>

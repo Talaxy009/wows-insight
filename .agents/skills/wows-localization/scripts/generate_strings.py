@@ -109,13 +109,6 @@ EXTRA = {
         "ja": "お気に入りを並べ替え",
         "ko": "즐겨찾기 순서 변경",
     },
-    "search_favorites_reorder_hint": {
-        "en": "Drag the handle to reorder",
-        "zh-Hans": "拖动左侧手柄调整顺序",
-        "zh-Hant": "拖動左側手柄調整順序",
-        "ja": "左のハンドルをドラッグして並べ替え",
-        "ko": "왼쪽 핸들을 드래그하여 순서 변경",
-    },
     "search_no_results_message": {
         "en": "No player matches “%1$s”.",
         "zh-Hans": "没有找到与“%1$s”匹配的玩家。",
