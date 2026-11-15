@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -24,20 +23,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,7 +54,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -78,8 +73,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import com.talaxy.wowsinsight.R
 import com.talaxy.wowsinsight.data.model.FavoritePlayer
@@ -88,9 +81,12 @@ import com.talaxy.wowsinsight.data.model.PlayerSummary
 import com.talaxy.wowsinsight.ui.components.EmptySearchState
 import com.talaxy.wowsinsight.ui.components.EmptyState
 import com.talaxy.wowsinsight.ui.components.ErrorState
+import com.talaxy.wowsinsight.ui.components.FavoriteStarButton
+import com.talaxy.wowsinsight.ui.components.ListHeader
 import com.talaxy.wowsinsight.ui.components.LoadingState
 import com.talaxy.wowsinsight.ui.components.PlayerRowCard
-import com.talaxy.wowsinsight.ui.util.StatFormat
+import com.talaxy.wowsinsight.ui.components.SelectedMenuItem
+import com.talaxy.wowsinsight.ui.components.serverAccountLabel
 import com.talaxy.wowsinsight.ui.util.UiText
 import com.talaxy.wowsinsight.ui.util.labelRes
 import com.talaxy.wowsinsight.ui.util.resolve
@@ -297,24 +293,10 @@ private fun SearchResults(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item(key = "results-header") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.search_results_header),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = StatFormat.integer(results.size),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            ListHeader(
+                title = stringResource(R.string.search_results_header),
+                count = results.size,
+            )
         }
         itemsIndexed(results, key = { _, player -> player.accountId }) { _, player ->
             PlayerRowCard(
@@ -354,24 +336,10 @@ private fun FavoritesList(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item(key = "favorites-header") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.search_favorites_header),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = StatFormat.integer(favorites.size),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            ListHeader(
+                title = stringResource(R.string.search_favorites_header),
+                count = favorites.size,
+            )
         }
         itemsIndexed(
             items = favorites,
@@ -494,18 +462,15 @@ private fun FavoriteRow(
                     .clickable(onClick = onOpen)
                     .padding(vertical = 10.dp, horizontal = 4.dp),
                 verticalArrangement = Arrangement.Center,
-            ) {                Text(
+            ) {
+                Text(
                     text = favorite.nickname,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = stringResource(
-                        R.string.player_account_id_with_server,
-                        stringResource(favorite.server.labelRes()),
-                        favorite.accountId.toString(),
-                    ),
+                    text = serverAccountLabel(favorite.server, favorite.accountId),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -513,13 +478,12 @@ private fun FavoriteRow(
                 )
             }
 
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Filled.Star,
-                    contentDescription = stringResource(R.string.search_favorite_remove),
-                    tint = MaterialTheme.colorScheme.tertiary,
-                )
-            }
+            FavoriteStarButton(
+                selected = true,
+                addLabel = stringResource(R.string.search_favorite_add),
+                removeLabel = stringResource(R.string.search_favorite_remove),
+                onClick = onRemove,
+            )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
@@ -560,21 +524,12 @@ private fun ServerMenu(
             onDismissRequest = { expanded = false },
         ) {
             GameServer.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(option.labelRes())) },
+                SelectedMenuItem(
+                    text = stringResource(option.labelRes()),
+                    selected = option == server,
                     onClick = {
                         expanded = false
                         onSelect(option)
-                    },
-                    leadingIcon = {
-                        if (option == server) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = null,
-                            )
-                        } else {
-                            Spacer(Modifier.size(24.dp))
-                        }
                     },
                 )
             }

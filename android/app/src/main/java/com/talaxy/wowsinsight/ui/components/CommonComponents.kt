@@ -14,16 +14,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -39,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -53,14 +52,10 @@ import com.talaxy.wowsinsight.data.model.GameServer
 import com.talaxy.wowsinsight.data.model.PlayerRating
 import com.talaxy.wowsinsight.data.model.PlayerSummary
 import com.talaxy.wowsinsight.data.model.ShipNation
-import com.talaxy.wowsinsight.data.model.ShipPerformance
-import com.talaxy.wowsinsight.data.model.ShipSort
 import com.talaxy.wowsinsight.ui.theme.ratingColor
 import com.talaxy.wowsinsight.ui.util.StatFormat
 import com.talaxy.wowsinsight.ui.util.labelRes
 import com.talaxy.wowsinsight.ui.util.resolve
-import com.talaxy.wowsinsight.ui.util.toUiText
-import com.talaxy.wowsinsight.ui.util.typeLabelRes
 import com.talaxy.wowsinsight.ui.util.UiText
 
 @Composable
@@ -192,16 +187,6 @@ fun <T> SegmentedChoice(
 private val SegmentedLabelPadding = 12.dp
 
 @Composable
-fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
-}
-
-@Composable
 fun RatingBadge(
     rating: PlayerRating,
     modifier: Modifier = Modifier,
@@ -232,6 +217,83 @@ fun RatingBadge(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+/** "Asia · ID 2013760513", the secondary line of every player row. */
+@Composable
+fun serverAccountLabel(server: GameServer, accountId: Long): String = stringResource(
+    R.string.player_account_id_with_server,
+    stringResource(server.labelRes()),
+    accountId.toString(),
+)
+
+/** The star that adds or removes a player from the favorites. */
+@Composable
+fun FavoriteStarButton(
+    selected: Boolean,
+    addLabel: String,
+    removeLabel: String,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = if (selected) Icons.Filled.Star else Icons.Outlined.StarBorder,
+            contentDescription = if (selected) removeLabel else addLabel,
+            tint = if (selected) {
+                MaterialTheme.colorScheme.tertiary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+    }
+}
+
+/** A menu row that marks the current value with a check in the icon slot. */
+@Composable
+fun SelectedMenuItem(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(text) },
+        onClick = onClick,
+        leadingIcon = {
+            if (selected) {
+                Icon(Icons.Filled.Check, contentDescription = null)
+            } else {
+                // Keeps the text aligned with the checked rows.
+                Spacer(Modifier.size(24.dp))
+            }
+        },
+    )
+}
+
+/** A list section title with the number of rows below it. */
+@Composable
+fun ListHeader(
+    title: String,
+    count: Int,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = StatFormat.integer(count),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -292,30 +354,19 @@ fun PlayerRowCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = stringResource(
-                        R.string.player_account_id_with_server,
-                        server.labelRes().let { stringResource(it) },
-                        player.accountId.toString(),
-                    ),
+                    text = serverAccountLabel(server, player.accountId),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                    contentDescription = stringResource(
-                        if (isFavorite) R.string.search_favorite_remove else R.string.search_favorite_add,
-                    ),
-                    tint = if (isFavorite) {
-                        MaterialTheme.colorScheme.tertiary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-            }
+            FavoriteStarButton(
+                selected = isFavorite,
+                addLabel = stringResource(R.string.search_favorite_add),
+                removeLabel = stringResource(R.string.search_favorite_remove),
+                onClick = onToggleFavorite,
+            )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,

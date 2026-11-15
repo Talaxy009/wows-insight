@@ -77,11 +77,8 @@ class PlayerViewModel(
         load()
     }
 
+    /** Reloads even when a report is already on screen (pull to refresh, retry). */
     fun refresh() {
-        load(force = true)
-    }
-
-    fun retry() {
         load(force = true)
     }
 

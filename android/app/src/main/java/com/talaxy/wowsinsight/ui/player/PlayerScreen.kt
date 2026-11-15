@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,16 +19,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -72,7 +67,6 @@ import com.talaxy.wowsinsight.data.model.ChartBreakdown
 import com.talaxy.wowsinsight.data.model.ChartMetric
 import com.talaxy.wowsinsight.data.model.FavoritePlayer
 import com.talaxy.wowsinsight.data.model.GameServer
-import com.talaxy.wowsinsight.data.model.ModeStats
 import com.talaxy.wowsinsight.data.model.PlayerRating
 import com.talaxy.wowsinsight.data.model.PlayerReport
 import com.talaxy.wowsinsight.data.model.PlayerSummary
@@ -81,12 +75,14 @@ import com.talaxy.wowsinsight.data.model.ShipSort
 import com.talaxy.wowsinsight.data.model.ranked
 import com.talaxy.wowsinsight.ui.components.EndAlignedDropdownMenu
 import com.talaxy.wowsinsight.ui.components.ErrorState
+import com.talaxy.wowsinsight.ui.components.FavoriteStarButton
 import com.talaxy.wowsinsight.ui.components.InfoRow
 import com.talaxy.wowsinsight.ui.components.LoadingState
 import com.talaxy.wowsinsight.ui.components.RatingBadge
+import com.talaxy.wowsinsight.ui.components.SelectedMenuItem
 import com.talaxy.wowsinsight.ui.components.SectionCard
-import com.talaxy.wowsinsight.ui.components.ShipMetaText
 import com.talaxy.wowsinsight.ui.components.StatsSections
+import com.talaxy.wowsinsight.ui.components.serverAccountLabel
 import com.talaxy.wowsinsight.ui.theme.ratingColor
 import com.talaxy.wowsinsight.ui.util.StatFormat
 import com.talaxy.wowsinsight.ui.util.labelRes
@@ -158,25 +154,12 @@ fun PlayerScreen(
                     }
                 },
                 actions = {
-                    IconButton(
+                    FavoriteStarButton(
+                        selected = isFavorite,
+                        addLabel = stringResource(R.string.player_favorite_add),
+                        removeLabel = stringResource(R.string.player_favorite_remove),
                         onClick = { onToggleFavorite(player, uiState.server) },
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            contentDescription = stringResource(
-                                if (isFavorite) {
-                                    R.string.player_favorite_remove
-                                } else {
-                                    R.string.player_favorite_add
-                                },
-                            ),
-                            tint = if (isFavorite) {
-                                MaterialTheme.colorScheme.tertiary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
+                    )
                     IconButton(
                         onClick = { showRatingInfo = true },
                         enabled = uiState.report != null,
@@ -334,11 +317,7 @@ private fun PlayerHeaderCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = stringResource(
-                            R.string.player_account_id_with_server,
-                            stringResource(server.labelRes()),
-                            account.accountId.toString(),
-                        ),
+                        text = serverAccountLabel(server, account.accountId),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -445,18 +424,12 @@ private fun BattleModePicker(
             onDismissRequest = { expanded = false },
         ) {
             modes.forEach { mode ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(mode.labelRes())) },
+                SelectedMenuItem(
+                    text = stringResource(mode.labelRes()),
+                    selected = mode == selection,
                     onClick = {
                         expanded = false
                         onSelect(mode)
-                    },
-                    leadingIcon = {
-                        if (mode == selection) {
-                            Icon(Icons.Filled.Check, contentDescription = null)
-                        } else {
-                            Spacer(Modifier.size(24.dp))
-                        }
                     },
                 )
             }
@@ -549,18 +522,12 @@ private fun SortMenu(
             onDismissRequest = { expanded = false },
         ) {
             ShipSort.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(option.labelRes())) },
+                SelectedMenuItem(
+                    text = stringResource(option.labelRes()),
+                    selected = option == sort,
                     onClick = {
                         expanded = false
                         onSelect(option)
-                    },
-                    leadingIcon = {
-                        if (option == sort) {
-                            Icon(Icons.Filled.Check, contentDescription = null)
-                        } else {
-                            Spacer(Modifier.size(24.dp))
-                        }
                     },
                 )
             }

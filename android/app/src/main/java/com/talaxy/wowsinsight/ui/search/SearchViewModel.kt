@@ -51,19 +51,16 @@ class SearchViewModel(
 
     private val query = MutableStateFlow("")
     private val server = MutableStateFlow(GameServer.ASIA)
-    private val results = MutableStateFlow<List<PlayerSummary>>(emptyList())
-    private val isSearching = MutableStateFlow(false)
-    private val error = MutableStateFlow<UiText?>(null)
+    private val output = MutableStateFlow(SearchOutput())
     private val retryToken = MutableStateFlow(0)
 
-    val uiState = combine(query, server, results, isSearching, error) {
-            currentQuery, currentServer, currentResults, searching, currentError ->
+    val uiState = combine(query, server, output) { currentQuery, currentServer, current ->
         SearchUiState(
             query = currentQuery,
             server = currentServer,
-            results = currentResults,
-            isSearching = searching,
-            error = currentError,
+            results = current.results,
+            isSearching = current.isSearching,
+            error = current.error,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -118,33 +115,21 @@ class SearchViewModel(
         }
     }
 
+    /** One atomic write per outcome, so the UI never sees a half-updated list. */
     private fun apply(outcome: SearchOutcome) {
-        when (outcome) {
-            SearchOutcome.Idle -> {
-                results.value = emptyList()
-                isSearching.value = false
-                error.value = null
-            }
-
-            SearchOutcome.Searching -> {
-                results.value = emptyList()
-                isSearching.value = true
-                error.value = null
-            }
-
-            is SearchOutcome.Success -> {
-                results.value = outcome.players
-                isSearching.value = false
-                error.value = null
-            }
-
-            is SearchOutcome.Failure -> {
-                results.value = emptyList()
-                isSearching.value = false
-                error.value = outcome.message
-            }
+        output.value = when (outcome) {
+            SearchOutcome.Idle -> SearchOutput()
+            SearchOutcome.Searching -> SearchOutput(isSearching = true)
+            is SearchOutcome.Success -> SearchOutput(results = outcome.players)
+            is SearchOutcome.Failure -> SearchOutput(error = outcome.message)
         }
     }
+
+    private data class SearchOutput(
+        val results: List<PlayerSummary> = emptyList(),
+        val isSearching: Boolean = false,
+        val error: UiText? = null,
+    )
 
     private data class SearchKey(
         val query: String,

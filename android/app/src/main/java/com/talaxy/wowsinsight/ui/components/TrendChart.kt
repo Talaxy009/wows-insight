@@ -33,7 +33,6 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 private data class TrendPoint(
@@ -98,8 +97,6 @@ fun TrendChart(
             .height(190.dp)
             .semantics { contentDescription = accessibility },
     ) {
-        if (points.isEmpty()) return@Canvas
-
         val leftGutter = 44.dp.toPx()
         val rightGutter = 10.dp.toPx()
         val topGutter = 10.dp.toPx()
@@ -131,15 +128,6 @@ fun TrendChart(
         fun yFor(value: Double): Float {
             val ratio = ((value - lower) / span).toFloat().coerceIn(0f, 1f)
             return plotTop + (1f - ratio) * plotHeight
-        }
-
-        fun drawLabel(text: String, x: Float, centerY: Float) {
-            val layout = textMeasurer.measure(AnnotatedString(text), style = labelStyle)
-            val clampedX = x.coerceIn(0f, size.width - layout.size.width)
-            drawText(
-                textLayoutResult = layout,
-                topLeft = Offset(clampedX, centerY - layout.size.height / 2f),
-            )
         }
 
         // Horizontal grid and y-axis labels.
@@ -207,7 +195,7 @@ fun TrendChart(
             Offset(xFor(point.day), yFor(metric.valueOf(point.stats)))
         }
 
-        fun buildLine(): Path = Path().apply {
+        val linePath = Path().apply {
             moveTo(offsets.first().x, offsets.first().y)
             for (index in 1 until offsets.size) {
                 val previous = offsets[index - 1]
@@ -216,18 +204,11 @@ fun TrendChart(
                 cubicTo(middleX, previous.y, middleX, current.y, current.x, current.y)
             }
         }
-
-        val linePath = buildLine()
+        // The area is the same curve closed along the bottom of the plot.
         val areaPath = Path().apply {
-            moveTo(offsets.first().x, plotBottom)
-            lineTo(offsets.first().x, offsets.first().y)
-            for (index in 1 until offsets.size) {
-                val previous = offsets[index - 1]
-                val current = offsets[index]
-                val middleX = (previous.x + current.x) / 2f
-                cubicTo(middleX, previous.y, middleX, current.y, current.x, current.y)
-            }
+            addPath(linePath)
             lineTo(offsets.last().x, plotBottom)
+            lineTo(offsets.first().x, plotBottom)
             close()
         }
 

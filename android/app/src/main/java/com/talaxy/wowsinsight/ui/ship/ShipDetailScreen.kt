@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -49,7 +48,6 @@ import com.talaxy.wowsinsight.ui.components.ShipMetaText
 import com.talaxy.wowsinsight.ui.components.StatsSections
 import com.talaxy.wowsinsight.ui.util.StatFormat
 import com.talaxy.wowsinsight.ui.util.UiText
-import com.talaxy.wowsinsight.ui.util.resolve
 import com.talaxy.wowsinsight.ui.util.typeLabelRes
 
 /**

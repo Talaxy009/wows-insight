@@ -135,42 +135,32 @@ class DefaultYuyukoApi(
         }
     }
 
-    // MARK: - Transport
+    // --- Transport ---
 
     private suspend inline fun <reified T> get(
         path: String,
         query: List<Pair<String, String>> = emptyList(),
-    ): T {
-        val url = buildUrl(path, query)
-        val request = Request.Builder()
-            .url(url)
-            .header("Accept", "application/json")
-            .header("Yuyuko-Client-Type", CLIENT_TYPE)
-            .get()
-            .build()
-        return request<T>(request)
-    }
+    ): T = request<T>(requestBuilder(path, query).get().build())
 
     private suspend inline fun <reified T> post(
         path: String,
         body: String,
-    ): T {
-        val request = Request.Builder()
-            .url(buildUrl(path))
-            .header("Accept", "application/json")
-            .header("Yuyuko-Client-Type", CLIENT_TYPE)
-            .post(body.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
-        return request<T>(request)
-    }
+    ): T = request<T>(
+        requestBuilder(path).post(body.toRequestBody(JSON_MEDIA_TYPE)).build(),
+    )
 
-    private fun buildUrl(
+    /** Every call carries the same headers, so they are only written once. */
+    private fun requestBuilder(
         path: String,
         query: List<Pair<String, String>> = emptyList(),
-    ): HttpUrl {
-        val base = BASE_URL.toHttpUrl().newBuilder().addPathSegments(path)
-        query.forEach { (name, value) -> base.addQueryParameter(name, value) }
-        return base.build()
+    ): Request.Builder {
+        val url = BASE_URL.toHttpUrl().newBuilder().addPathSegments(path).apply {
+            query.forEach { (name, value) -> addQueryParameter(name, value) }
+        }
+        return Request.Builder()
+            .url(url.build())
+            .header("Accept", "application/json")
+            .header("Yuyuko-Client-Type", CLIENT_TYPE)
     }
 
     private suspend inline fun <reified T> request(httpRequest: Request): T = withContext(Dispatchers.IO) {

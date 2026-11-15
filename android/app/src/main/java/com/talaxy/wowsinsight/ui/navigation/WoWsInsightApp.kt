@@ -89,7 +89,7 @@ fun WoWsInsightApp(container: AppContainer) {
                 favorites = favorites,
                 onBack = { navController.popBackStack() },
                 onLoadIfNeeded = playerViewModel::loadIfNeeded,
-                onRetry = playerViewModel::retry,
+                onRetry = playerViewModel::refresh,
                 onRefresh = playerViewModel::refresh,
                 onDismissError = playerViewModel::dismissError,
                 onToggleFavorite = favoritesViewModel::toggle,
@@ -138,7 +138,7 @@ fun WoWsInsightApp(container: AppContainer) {
                 isLoading = uiState.isLoading,
                 error = uiState.error,
                 onBack = { navController.popBackStack() },
-                onRetry = playerViewModel::retry,
+                onRetry = playerViewModel::refresh,
             )
         }
     }

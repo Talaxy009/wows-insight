@@ -11,7 +11,6 @@ import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.roundToInt
 
 /** Pure chart maths, separated from Compose so it can be unit tested. */
 object ChartMath {
@@ -98,7 +97,4 @@ object ChartMath {
         if (scale <= 0.0) return 0f
         return (ratingValue.coerceAtLeast(0) / scale).toFloat().coerceIn(0f, 1f)
     }
-
-    /** Rounds a double to a stable display string for tests and labels. */
-    fun roundedInt(value: Double): Int = value.roundToInt()
 }

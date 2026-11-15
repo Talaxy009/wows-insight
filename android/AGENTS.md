@@ -76,6 +76,10 @@ android/
   `EndAlignedDropdownMenu`：它把菜单放进 `Box(Modifier.align(Alignment.BottomEnd))`，这个零尺寸
   锚点位于父 `Box`（按钮）右下角，M3 的定位器发现左对齐会超出窗口后会自动退到“菜单右边缘贴锚点
   右边缘”，不需要用 `offset` 猜菜单宽度。新增这类菜单直接用这个组件，不要再手写那一层 Box。
+- **可复用的行级组件**：玩家行的次要行统一用 `serverAccountLabel(server, accountId)`（「亚服 · ID …」），
+  收藏星统一用 `FavoriteStarButton`（已选时 `Filled.Star` + tertiary 色），列表分组标题统一用
+  `ListHeader(title, count)`，菜单里标记当前项的行统一用 `SelectedMenuItem`。新增同类界面直接拼这些
+  组件，不要各写一遍 `stringResource` + 三元色，否则改文案或配色时必然漏改一处。
 - **日期显示**：`StatFormat.date` 用 `FormatStyle.MEDIUM`（「2026年11月14日」/「Nov 14, 2026」），
   与 iOS 的 `.abbreviated` 对齐，别换成 `SHORT`（中文会退化成「2016/10/21」、英文变「10/21/16」）。
   这个日期比纯数字宽，战舰列表行内副标题（舰种 · 日期 · 胜率，按「最近战斗」排序时）一行放不下，

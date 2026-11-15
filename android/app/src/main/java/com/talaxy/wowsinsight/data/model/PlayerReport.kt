@@ -88,22 +88,42 @@ data class PlayerReport(
     fun records(forMode: BattleMode): List<BattleRecord> = modeRecords[forMode].orEmpty()
 
     /** The recorded days that fought [mode], which is what the trend plots. */
-    fun dailyStats(forMode: BattleMode): List<DailyStats> =
-        dailyStats.filter { (it.modes[forMode]?.stats?.battleCount ?: 0) > 0 }
+    fun dailyStats(forMode: BattleMode): List<DailyStats> = dailyByMode[forMode].orEmpty()
 
     /** The categories that fought [mode], in chart order. */
-    fun categories(breakdown: ChartBreakdown, forMode: BattleMode): List<CategoryStats> {
-        val source = if (breakdown == ChartBreakdown.SHIP_TYPE) shipTypes else tiers
-        val collator = Collator.getInstance(Locale.getDefault())
-        return source
-            .filter { (it.modes[forMode]?.stats?.battleCount ?: 0) > 0 }
-            .sortedWith { left, right ->
-                if (left.sortOrder == right.sortOrder) {
-                    collator.compare(left.key.toString(), right.key.toString())
-                } else {
-                    left.sortOrder.compareTo(right.sortOrder)
-                }
+    fun categories(breakdown: ChartBreakdown, forMode: BattleMode): List<CategoryStats> =
+        categoriesByMode[breakdown].orEmpty()[forMode].orEmpty()
+
+    /**
+     * The player page asks for these lists on every recomposition (scrolling the
+     * ship list rebuilds it), so filtering and locale-aware sorting happen once
+     * per mode instead of per frame.
+     */
+    private val dailyByMode: Map<BattleMode, List<DailyStats>> by lazy {
+        dailyStats
+            .flatMap { it.modes.keys }
+            .distinct()
+            .associateWith { mode ->
+                dailyStats.filter { (it.modes[mode]?.stats?.battleCount ?: 0) > 0 }
             }
+    }
+
+    private val categoriesByMode: Map<ChartBreakdown, Map<BattleMode, List<CategoryStats>>> by lazy {
+        val collator = Collator.getInstance(Locale.getDefault())
+        ChartBreakdown.entries.associateWith { breakdown ->
+            val source = if (breakdown == ChartBreakdown.SHIP_TYPE) shipTypes else tiers
+            val modes = source.flatMap { it.modes.keys }.distinct()
+            modes.associateWith { mode ->
+                source
+                    .filter { (it.modes[mode]?.stats?.battleCount ?: 0) > 0 }
+                    .sortedWith(
+                        compareBy<CategoryStats> { it.sortOrder }
+                            .thenComparator { left, right ->
+                                collator.compare(left.key.toString(), right.key.toString())
+                            },
+                    )
+            }
+        }
     }
 
     companion object {
