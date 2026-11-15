@@ -24,10 +24,15 @@ struct SearchView: View {
                 )
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        favoritesMenu
+                        serverMenu
+                    }
+                    // iOS 26 merges adjacent trailing items into one glass pill;
+                    // a fixed spacer keeps the two menus visually separate.
+                    if #available(iOS 26.0, *) {
+                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        serverMenu
+                        favoritesMenu
                     }
                 }
                 .task(id: model.requestKey) {
@@ -229,7 +234,13 @@ struct SearchView: View {
                 }
             }
         } label: {
-            Label(model.server.displayName, systemImage: "globe")
+            // A toolbar `Label` renders icon-only, so the current server is
+            // spelled out with an explicit HStack to match Android.
+            HStack(spacing: 4) {
+                Image(systemName: "globe")
+                Text(model.server.displayName)
+                    .lineLimit(1)
+            }
         }
     }
 }

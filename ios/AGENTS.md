@@ -111,6 +111,12 @@ ios/
 - **导入语义**：`FavoritesStore.importArchive(_:)` 是「追加合并」而不是「覆盖」：已存在
   （同 `accountId` + 同 `server`）的条目跳过，新的追加到末尾并保留现有顺序，返回
   `ImportSummary(added:skipped:)` 供弹窗提示。这样导入永远不会删掉本机已有的收藏。
+- **首页工具栏**：右上角是「⋯」收藏菜单和服务器菜单。服务器菜单的当前服务器名必须用
+  `HStack { Image(systemName: "globe"); Text(...) }` 显式排版——工具栏里的 `Label` 只渲染图标，
+  用 `Label(displayName, systemImage: "globe")` 会让人看不到当前选的是哪个服。Android 侧
+  `ServerMenu` 用 `TextButton` 显示同样的「地球图标 + 服务器名」。iOS 26 会把相邻的 trailing
+  工具栏项合并成一个玻璃胶囊，两个菜单之间要放 `ToolbarSpacer(.fixed)`（包在
+  `if #available(iOS 26.0, *)` 里，工程最低版本是 iOS 18）才能显示为两个独立按钮。
 - **字体**：字号统一走 `Theme.swift` 里的语义化 `Font` token（`statLabel` / `statValue` /
   `detailValue` / `rowSubtitle` / `rowChevron` / `ratingValue` / `ratingTier`），全部基于
   text style 以跟随 Dynamic Type。可读文字最小用 `footnote`（默认 13pt）；`caption` /
