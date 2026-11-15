@@ -299,8 +299,7 @@ private struct StatCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(title)
-                .font(.headline)
+            CardHeader(title: title)
             content
         }
         .cardStyle()

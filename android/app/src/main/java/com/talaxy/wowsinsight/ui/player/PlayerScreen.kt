@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -80,6 +79,7 @@ import com.talaxy.wowsinsight.data.model.PlayerSummary
 import com.talaxy.wowsinsight.data.model.ShipPerformance
 import com.talaxy.wowsinsight.data.model.ShipSort
 import com.talaxy.wowsinsight.data.model.ranked
+import com.talaxy.wowsinsight.ui.components.EndAlignedDropdownMenu
 import com.talaxy.wowsinsight.ui.components.ErrorState
 import com.talaxy.wowsinsight.ui.components.InfoRow
 import com.talaxy.wowsinsight.ui.components.LoadingState
@@ -440,7 +440,7 @@ private fun BattleModePicker(
                 )
             }
         }
-        DropdownMenu(
+        EndAlignedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
@@ -544,7 +544,7 @@ private fun SortMenu(
                 maxLines = 1,
             )
         }
-        DropdownMenu(
+        EndAlignedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
@@ -622,7 +622,7 @@ private fun ShipRow(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

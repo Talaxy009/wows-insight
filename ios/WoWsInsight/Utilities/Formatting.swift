@@ -22,6 +22,6 @@ enum StatFormat {
     static func date(_ timestamp: Int?) -> String {
         guard let timestamp, timestamp > 0 else { return placeholder }
         return Date(timeIntervalSince1970: TimeInterval(timestamp))
-            .formatted(date: .numeric, time: .omitted)
+            .formatted(date: .abbreviated, time: .omitted)
     }
 }

@@ -33,13 +33,16 @@ object StatFormat {
 
     fun date(timestampSeconds: Int?): String {
         val timestamp = timestampSeconds?.takeIf { it > 0 } ?: return PLACEHOLDER
-        return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+        return dateFormatter
             .withZone(ZoneId.systemDefault())
             .format(Instant.ofEpochSecond(timestamp.toLong()))
     }
 
-    fun date(day: LocalDate?): String =
-        day?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) ?: PLACEHOLDER
+    fun date(day: LocalDate?): String = day?.format(dateFormatter) ?: PLACEHOLDER
+
+    /** `MEDIUM` is the style iOS uses (`.abbreviated`): "2026年11月14日" / "Nov 14, 2026". */
+    private val dateFormatter: DateTimeFormatter =
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 
     fun ratingText(rating: PlayerRating): String =
         if (rating.isValid) integer(rating.value) else PLACEHOLDER

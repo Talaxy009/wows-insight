@@ -48,7 +48,7 @@ private struct TrendCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ChartHeader(title: L10n.Chart.trendTitle) {
+            CardHeader(title: L10n.Chart.trendTitle) {
                 Picker(L10n.Chart.trendTitle, selection: $metric) {
                     ForEach(ChartMetric.allCases) { option in
                         Text(option.label).tag(option)
@@ -196,7 +196,7 @@ private struct BreakdownCard: View {
         let scale = scaleMaximum(in: categories)
 
         VStack(alignment: .leading, spacing: 16) {
-            ChartHeader(title: L10n.Chart.breakdownTitle) {
+            CardHeader(title: L10n.Chart.breakdownTitle) {
                 Picker(L10n.Chart.breakdownTitle, selection: $breakdown) {
                     ForEach(ChartBreakdown.allCases) { option in
                         Text(option.label).tag(option)
@@ -261,28 +261,7 @@ private struct BreakdownRow: View {
     }
 }
 
-// MARK: - Shared
-
-/// A card headline with the control that switches what the chart plots.
-private struct ChartHeader<Control: View>: View {
-    let title: String
-    let control: Control
-
-    init(title: String, @ViewBuilder control: () -> Control) {
-        self.title = title
-        self.control = control()
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(title)
-                .font(.headline)
-            Spacer(minLength: 8)
-            control
-                .frame(maxWidth: 180)
-        }
-    }
-}
+// MARK: - Axis labels
 
 private extension ChartMetric {
     /// Y-axis label: a plain number for the rating, a percentage for the win

@@ -150,10 +150,7 @@ private struct ShipsSection: View {
         let sorted = ships.ranked(in: mode, by: sort)
 
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(L10n.Player.shipsTitle(StatFormat.integer(sorted.count)))
-                    .font(.headline)
-                Spacer()
+            CardHeader(title: L10n.Player.shipsTitle(StatFormat.integer(sorted.count))) {
                 if !sorted.isEmpty {
                     Menu {
                         Picker(L10n.Player.sort, selection: $sort) {
@@ -226,7 +223,8 @@ private struct ShipRow: View {
                 Text(subtitle)
                     .font(.rowSubtitle)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 8)
@@ -236,11 +234,19 @@ private struct ShipRow: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(rating.tier.color)
                     .monospacedDigit()
-                Text(L10n.Player.shipAverageDamage(StatFormat.decimal(stats?.stats.averageDamage ?? 0)))
-                    .font(.rowSubtitle)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                // The flame stands in for the "Avg. damage" label, as the
+                // Android ship row does: the number alone would be ambiguous,
+                // and the label does not fit beside the ship subtitle.
+                HStack(spacing: 3) {
+                    Image(systemName: "flame.fill")
+                        .font(.caption)
+                    Text(averageDamage)
+                        .font(.rowSubtitle)
+                        .lineLimit(1)
+                }
+                .foregroundStyle(.secondary)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L10n.Player.shipAverageDamage(averageDamage))
             }
 
             Image(systemName: "chevron.right")
@@ -253,6 +259,10 @@ private struct ShipRow: View {
     }
 
     private var rating: PlayerRating { stats?.rating ?? .unknown }
+
+    private var averageDamage: String {
+        StatFormat.decimal(stats?.stats.averageDamage ?? 0)
+    }
 
     private var subtitle: String {
         guard let stats else { return performance.ship.typeLabel }

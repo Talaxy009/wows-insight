@@ -94,7 +94,11 @@ ios/
   `levelInfo`，在舰种 / 等级之间切换；这张卡是自绘的条形行而不是 Swift Charts 的横向条形图
   ——iOS 26 上分类轴的标签会画进绘图区、和条形重叠。两张卡的选中项存在 `PlayerView` 里，
   因为 `LazyVStack` 回收卡片时会丢掉卡片自己的 `@State`。没有数据的卡片整张隐藏，所以服务端
-  没记录过的账号（`code: 412 无recent记录`）只会少一张卡，不会看到空图。
+  没记录过的账号（`code: 412 无recent记录`）只会少一张卡，不会看到空图。两张卡的切换控件由
+  `Components.swift` 的 `CardHeader` 排版（图表卡、`StatCard`、战舰列表标题共用它）：
+  默认和标题同一行、按内容取宽，**不要给它加固定 `maxWidth`**（以前写死 180pt，日文的
+  「レーティング」会被省略号截断）；放不下时 `ViewThatFits` 会退回「标题 + 满宽控件」的两行
+  形态，所以标题也不能加 `lineLimit` 以外的压缩手段。
 - **没有本地缓存**：评分、舰船名称、图标全部来自服务端，App 不打包期望值数据，也不往 Caches
   里写百科 JSON。
 - **收藏**：`FavoritesStore` 是 `@MainActor @Observable`，通过 `@Environment` 注入所有页面；
@@ -122,6 +126,14 @@ ios/
   text style 以跟随 Dynamic Type。可读文字最小用 `footnote`（默认 13pt）；`caption` /
   `caption2` 在默认尺寸下只有 12pt / 11pt，除图标外不再使用。层级靠字重和颜色区分，不靠缩小
   字号，`minimumScaleFactor` 不要低于 0.8。
+- **日期格式**：`StatFormat.date` 用 `.abbreviated`（对应 Android 的 `FormatStyle.MEDIUM`），
+  中文是「2016年10月21日」、英文是「Oct 21, 2016」。**不要退回 `.numeric`**：它会把中文日期
+  变成「2016/10/21」，丢掉年 / 月 / 日，和 Android 也对不上。这个日期比数字形式宽，战舰列表
+  行内副标题（舰种 · 日期 · 胜率）一行放不下，所以那里是 `lineLimit(2)` 换行而不是截断。
+- **战舰列表行**：右侧评分的下一行用「火焰图标 + 均伤数字」而不是「均伤 62,196」文本，和
+  Android 的 `ShipRow` 一致（图标 `flame.fill`，`.caption` 12pt）。`L10n.Player.shipAverageDamage`
+  仍然保留，只用于该行的 `accessibilityLabel`——VoiceOver 念「均伤 62,196」，不要因为界面上
+  看不到这句话就把 key 删掉。
 - **多语言**：`L10n.swift` 只声明语义化 key，文案（含英文）全部只存在 `Localizable.xcstrings`
   里，同一个标签不需要在两个地方各写一遍；`String(localized:)` 自动跟随系统语言，没有 App 内
   切换开关。key 在 catalog 里缺失时会直接显示 key 本身，等于把漏翻译暴露出来。App 名称由

@@ -52,6 +52,49 @@ struct StatCell: View {
     }
 }
 
+/// A card headline with an optional control on the same row.
+///
+/// The control shares the headline's row so the card body keeps its vertical
+/// space; when the two no longer fit side by side (long translations, large
+/// Dynamic Type) it drops to its own full-width row instead of squeezing the
+/// title into an ellipsis.
+struct CardHeader<Control: View>: View {
+    let title: String
+    let control: Control
+
+    init(title: String, @ViewBuilder control: () -> Control) {
+        self.title = title
+        self.control = control()
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                titleText
+                Spacer(minLength: 8)
+                control
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                titleText
+                control
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var titleText: some View {
+        Text(title)
+            .font(.headline)
+    }
+}
+
+extension CardHeader where Control == EmptyView {
+    /// A headline with nothing beside it.
+    init(title: String) {
+        self.init(title: title) { EmptyView() }
+    }
+}
+
 /// One cell of the two-column detailed statistics grid.
 struct DetailStat: View {
     let title: String

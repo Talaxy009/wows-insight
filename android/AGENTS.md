@@ -61,7 +61,25 @@ android/
   `PlayerRoute` / `ShipRoute`），新增页面时同时加 route 和 `WoWsInsightApp` 的 composable。
 - **Material 3**：界面按 Material 3 和 Android 指南实现（下拉刷新、edge-to-edge、
   TalkBack 操作等），不要为了「和 iOS 一样」复制 iOS 布局。颜色 / 字体走 `ui/theme`，
-  不要散落硬编码色值。
+  不要散落硬编码色值。例外是卡片头部的次要控件（图表卡的评分 / 胜率、舰种 / 等级切换）：
+  放进 `SectionCard(trailing = ...)` 和标题同一行，**不要** `fillMaxWidth()` 独占一行——
+  两个短选项用满宽分段按钮会压掉图表一整个行高、也抢走标题和数据的视觉层级。
+  这类小切换器用 `ui/components/CommonComponents.kt` 的 `SegmentedChoice`（图表卡是唯一使用者，
+  放共享位置是因为它跟业务无关）：`SingleChoiceSegmentedButtonRow` 不会按标签自适应宽度，
+  而是取父级给它的宽度再按每段 `weight(1f)` 平分，直接塞进标题行会把英文「Ship type」压成
+  「Ship ty…」。所以它用 `TextMeasurer` 量出最宽标签再加两侧 padding（12dp，与
+  `ButtonDefaults.TextButtonContentPadding` 一致）、乘以段数，把行宽显式传进去，并用
+  `BoxWithConstraints` 兜住上限（超大字号时收缩而不是溢出卡片），测量结果按标签 `remember`。
+  段内传 `icon = {}` 去掉前置对勾：选中态由填充容器表达，对勾每段要吃约 30dp。
+- **下拉菜单对齐**：`DropdownMenu` 默认把菜单左边缘贴住锚点左边缘。需要让菜单靠右（满宽控件如
+  战斗类型选择器、右对齐按钮如舰船排序）时，用 `ui/components/CommonComponents.kt` 的
+  `EndAlignedDropdownMenu`：它把菜单放进 `Box(Modifier.align(Alignment.BottomEnd))`，这个零尺寸
+  锚点位于父 `Box`（按钮）右下角，M3 的定位器发现左对齐会超出窗口后会自动退到“菜单右边缘贴锚点
+  右边缘”，不需要用 `offset` 猜菜单宽度。新增这类菜单直接用这个组件，不要再手写那一层 Box。
+- **日期显示**：`StatFormat.date` 用 `FormatStyle.MEDIUM`（「2026年11月14日」/「Nov 14, 2026」），
+  与 iOS 的 `.abbreviated` 对齐，别换成 `SHORT`（中文会退化成「2016/10/21」、英文变「10/21/16」）。
+  这个日期比纯数字宽，战舰列表行内副标题（舰种 · 日期 · 胜率，按「最近战斗」排序时）一行放不下，
+  所以那里是 `maxLines = 2` 换行而不是省略号——写成 `maxLines = 1` 会把胜率截掉。
 - **Compose 性能**：列表用 `LazyColumn` + 稳定 key；图表数据计算放在 `ui/components/ChartMath.kt`
   并保持纯函数，便于单元测试。
 
