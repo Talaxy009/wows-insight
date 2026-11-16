@@ -17,3 +17,6 @@ data class ShipRoute(
     val shipId: Long,
     val mode: String,
 )
+
+@Serializable
+data object AboutRoute

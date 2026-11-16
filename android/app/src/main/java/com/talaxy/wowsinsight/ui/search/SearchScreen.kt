@@ -33,10 +33,12 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -118,6 +120,7 @@ fun SearchScreen(
     onMoveFavoriteBy: (FavoritePlayer, Int) -> Unit,
     onImport: (Uri) -> Unit,
     onExport: (Uri) -> Unit,
+    onOpenAbout: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -168,6 +171,7 @@ fun SearchScreen(
                                 importLauncher.launch(arrayOf("application/json", "text/plain"))
                             },
                             onExport = { exportLauncher.launch(EXPORT_FILE_NAME) },
+                            onOpenAbout = onOpenAbout,
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -542,6 +546,7 @@ private fun FavoritesMenu(
     favoritesEmpty: Boolean,
     onImport: () -> Unit,
     onExport: () -> Unit,
+    onOpenAbout: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -581,6 +586,20 @@ private fun FavoritesMenu(
                 onClick = {
                     expanded = false
                     onExport()
+                },
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.about_title)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onOpenAbout()
                 },
             )
         }

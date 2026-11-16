@@ -53,6 +53,7 @@ ios/
     │   ├── PlayerCards.swift          // 玩家页卡片组件
     │   ├── PlayerCharts.swift         // 玩家页图表（趋势、评分分布）
     │   ├── ShipDetailView.swift       // 单舰详情
+    │   ├── AboutView.swift            // 关于页（图标 / 版本 / 外链）
     │   ├── Components.swift           // 评分徽章、统计格子等
     │   └── Theme.swift                // 颜色、卡片样式
     ├── Utilities/
@@ -61,10 +62,10 @@ ios/
     ├── Localizable.xcstrings          // en / ja / ko / zh-Hans / zh-Hant 界面文案
     ├── InfoPlist.xcstrings            // 各语言 App 名称
     ├── PrivacyInfo.xcprivacy          // UserDefaults 隐私清单
-    └── Assets.xcassets                // AppIcon、AccentColor
+    └── Assets.xcassets                // AppIcon、AppIconPreview、AccentColor
 ```
 
-页面只有三个主界面：搜索 / 收藏首页、玩家详情、单舰详情。
+页面有四个主界面：搜索 / 收藏首页、玩家详情、单舰详情、关于（从首页「⋯」收藏菜单进入）。
 
 ## 实现要点
 
@@ -129,6 +130,11 @@ ios/
   `ServerMenu` 用 `TextButton` 显示同样的「地球图标 + 服务器名」。iOS 26 会把相邻的 trailing
   工具栏项合并成一个玻璃胶囊，两个菜单之间要放 `ToolbarSpacer(.fixed)`（包在
   `if #available(iOS 26.0, *)` 里，工程最低版本是 iOS 18）才能显示为两个独立按钮。
+- **关于页**：首页「⋯」收藏菜单的最后一项 → `AboutView`。图标用 `Assets` 里的
+  `AppIconPreview`（`AppIcon.png` 的副本；`Image("AppIcon")` 不能可靠地按名字加载应用图标），
+  版本号读 `CFBundleShortVersionString` / `CFBundleVersion`（来自 `version.xcconfig` 映射的
+  `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`），文案全部走 `L10n.About`。GitHub / Yuyuko
+  用 `Link` 交给系统打开，VoiceOver 会把整行读成链接。
 - **字体**：字号统一走 `Theme.swift` 里的语义化 `Font` token（`statLabel` / `statValue` /
   `detailValue` / `rowSubtitle` / `rowChevron` / `ratingValue` / `ratingTier`），全部基于
   text style 以跟随 Dynamic Type。可读文字最小用 `footnote`（默认 13pt）；`caption` /

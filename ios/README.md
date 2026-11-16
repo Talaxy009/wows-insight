@@ -22,6 +22,8 @@
   - 玩家页右上角星标收藏 / 取消收藏，搜索结果左滑也能直接收藏
   - 首页左滑取消收藏，长按行拖动调整顺序
   - 首页右上角「⋯」菜单把收藏导出成 JSON，或在另一台设备上导入
+- 关于页：应用图标、名称、版本号，GitHub 仓库与 Yuyuko 数据服务的跳转，以及非官方声明
+  （首页「⋯」菜单最后一项）
 - 界面语言：简体中文 / 繁體中文 / English / 日本語 / 한국어，跟随系统语言
 
 ## 运行
@@ -70,15 +72,15 @@ ios/
     ├── Models/            // 服务器、战斗类型、统计数据、评分、收藏格式
     ├── Networking/        // async/await API 客户端与 DTO 映射
     ├── ViewModels/        // 搜索、玩家页加载、收藏读写
-    ├── Views/             // 搜索 / 玩家 / 单舰三个主界面与组件
+    ├── Views/             // 搜索 / 玩家 / 单舰 / 关于四个界面与组件
     ├── Utilities/         // 格式化与取消错误判断
     ├── Localizable.xcstrings   // en / ja / ko / zh-Hans / zh-Hant 界面文案
     ├── InfoPlist.xcstrings     // 各语言 App 名称
     ├── PrivacyInfo.xcprivacy   // UserDefaults 隐私清单
-    └── Assets.xcassets         // AppIcon、AccentColor
+    └── Assets.xcassets         // AppIcon、AppIconPreview、AccentColor
 ```
 
-页面只有三个主界面：搜索 / 收藏首页、玩家详情、单舰详情。
+页面有四个主界面：搜索 / 收藏首页、玩家详情、单舰详情、关于（从首页「⋯」收藏菜单进入）。
 
 ## 多语言
 

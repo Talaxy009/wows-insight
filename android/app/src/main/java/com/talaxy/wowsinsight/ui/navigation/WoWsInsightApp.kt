@@ -14,6 +14,7 @@ import com.talaxy.wowsinsight.AppContainer
 import com.talaxy.wowsinsight.data.model.BattleMode
 import com.talaxy.wowsinsight.data.model.GameServer
 import com.talaxy.wowsinsight.data.model.PlayerSummary
+import com.talaxy.wowsinsight.ui.about.AboutScreen
 import com.talaxy.wowsinsight.ui.favorites.FavoritesViewModel
 import com.talaxy.wowsinsight.ui.player.PlayerScreen
 import com.talaxy.wowsinsight.ui.player.PlayerViewModel
@@ -67,7 +68,12 @@ fun WoWsInsightApp(container: AppContainer) {
                 onMoveFavoriteBy = favoritesViewModel::moveBy,
                 onImport = favoritesViewModel::import,
                 onExport = favoritesViewModel::export,
+                onOpenAbout = { navController.navigate(AboutRoute) },
             )
+        }
+
+        composable<AboutRoute> {
+            AboutScreen(onBack = { navController.popBackStack() })
         }
 
         composable<PlayerRoute> { entry ->

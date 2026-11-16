@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 struct SearchView: View {
     @State private var model = SearchModel()
     @State private var isImportingFavorites = false
+    @State private var isShowingAbout = false
     @State private var importAlert: ImportAlert?
 
     @Environment(FavoritesStore.self) private var favorites
@@ -16,6 +17,9 @@ struct SearchView: View {
                 .navigationTitle(L10n.App.title)
                 .navigationDestination(for: PlayerTarget.self) { target in
                     PlayerView(account: target.player, server: target.server)
+                }
+                .navigationDestination(isPresented: $isShowingAbout) {
+                    AboutView()
                 }
                 .searchable(
                     text: $model.query,
@@ -169,6 +173,14 @@ struct SearchView: View {
                 Label(L10n.Search.exportFavorites, systemImage: "square.and.arrow.up")
             }
             .disabled(favorites.players.isEmpty)
+
+            Divider()
+
+            Button {
+                isShowingAbout = true
+            } label: {
+                Label(L10n.About.title, systemImage: "info.circle")
+            }
         } label: {
             Label(L10n.Search.transferMenu, systemImage: "ellipsis.circle")
         }

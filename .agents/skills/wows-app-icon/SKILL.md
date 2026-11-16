@@ -42,6 +42,16 @@ python .agents/skills/wows-app-icon/scripts/build_adaptive_icon.py
 `universal` 图标（`Contents.json` 里只有这一条），需要从同一份 `icon.svg` 导出的 PNG 替换。
 脚本不生成 iOS 资源，替换后确认 PNG 是 1024×1024、无透明通道。
 
+## 关于页用的方形图标副本
+
+关于页显示的是完整方形图标（不是 adaptive icon），所以仓库里另存了两份 `AppIcon.png` 的副本：
+
+- `ios/WoWsInsight/Assets.xcassets/AppIconPreview.imageset/AppIconPreview.png`（`Image("AppIconPreview")`）
+- `android/app/src/main/res/drawable-nodpi/app_icon.png`（`R.drawable.app_icon`）
+
+替换 `AppIcon.png` 后把同一份 PNG 覆盖到这两个路径（`cp` 即可，不需要改 `Contents.json`），
+否则关于页会继续显示旧图标。
+
 ## 验证
 
 - 生成后 `git diff --stat android/app/src/main/res` 只应出现预期文件；重复运行脚本不应产生

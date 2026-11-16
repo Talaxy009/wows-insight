@@ -285,6 +285,29 @@ enum L10n {
         static var maxScouting: String { L10n.text("record.maxScouting") }
     }
 
+    // MARK: - About
+
+    /// Copy of the about page reachable from the last item of the favorites menu.
+    enum About {
+        static var title: String { L10n.text("about.title") }
+        /// One-line description shown under the app name.
+        static var tagline: String { L10n.text("about.tagline") }
+
+        /// Version line; the first argument is the marketing version, the
+        /// second the build number.
+        static func version(_ version: String, build: String) -> String {
+            L10n.format("about.version", version, build)
+        }
+
+        static var linksSection: String { L10n.text("about.links.section") }
+        static var github: String { L10n.text("about.github") }
+        static var githubSubtitle: String { L10n.text("about.github.subtitle") }
+        static var yuyuko: String { L10n.text("about.yuyuko") }
+        static var yuyukoSubtitle: String { L10n.text("about.yuyuko.subtitle") }
+        static var disclaimer: String { L10n.text("about.disclaimer") }
+        static var developer: String { L10n.text("about.developer") }
+    }
+
     // MARK: - Errors
 
     enum Error {

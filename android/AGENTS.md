@@ -33,6 +33,7 @@ android/
 │       ├── search/        // 首页与防抖搜索
 │       ├── player/        // 玩家页、图表、评分说明
 │       ├── ship/          // 单舰详情
+│       ├── about/         // 关于页
 │       ├── components/    // 卡片、统计格子、Canvas 图表
 │       ├── navigation/    // 类型安全路由与 NavHost
 │       ├── theme/         // Material 3 颜色与字体
@@ -59,7 +60,8 @@ android/
 - **错误**：`ApiException` 区分 HTTP / 信封 code / 网络 / 解码；UI 把异常转成 `UiText`
   后显示，`UiText` 用字符串资源 id，不要在 ViewModel 里拼死字符串。
 - **导航**：`ui/navigation/Routes.kt` 使用 `@Serializable` 类型安全路由（`SearchRoute` /
-  `PlayerRoute` / `ShipRoute`），新增页面时同时加 route 和 `WoWsInsightApp` 的 composable。
+  `PlayerRoute` / `ShipRoute` / `AboutRoute`），新增页面时同时加 route 和 `WoWsInsightApp` 的
+  composable。
 - **Material 3**：界面按 Material 3 和 Android 指南实现（下拉刷新、edge-to-edge、
   TalkBack 操作等），不要为了「和 iOS 一样」复制 iOS 布局。颜色 / 字体走 `ui/theme`，
   不要散落硬编码色值。例外是卡片头部的次要控件（图表卡的评分 / 胜率、舰种 / 等级切换）：
@@ -81,6 +83,11 @@ android/
   收藏星统一用 `FavoriteStarButton`（已选时 `Filled.Star` + tertiary 色），列表分组标题统一用
   `ListHeader(title, count)`，菜单里标记当前项的行统一用 `SelectedMenuItem`。新增同类界面直接拼这些
   组件，不要各写一遍 `stringResource` + 三元色，否则改文案或配色时必然漏改一处。
+- **关于页**：首页「⋯」菜单最后一项进入 `AboutScreen`。图标用 `res/drawable-nodpi/app_icon.png`
+  （`AppIcon.png` 的方形副本；adaptive icon 不能直接当普通图片画），版本号取
+  `BuildConfig.VERSION_NAME` / `BuildConfig.VERSION_CODE`（与 `version.xcconfig` 同源），
+  外链用 `LocalUriHandler` 打开并用 `runCatching` 兜住没有浏览器的设备，文案全部走
+  `R.string.about_*`。
 - **日期显示**：`StatFormat.date` 用 `FormatStyle.MEDIUM`（「2026年11月14日」/「Nov 14, 2026」），
   与 iOS 的 `.abbreviated` 对齐，别换成 `SHORT`（中文会退化成「2016/10/21」、英文变「10/21/16」）。
   这个日期比纯数字宽，战舰列表行内副标题（舰种 · 日期 · 胜率，按「最近战斗」排序时）一行放不下，
@@ -228,7 +235,8 @@ adb shell am start -n com.talaxy.wowsinsight/.ui.preview.ChartPreviewActivity
 - 不复制 iOS 的视觉细节；两端共享的是数据、评分和收藏文件，不是像素。
 - 应用图标源文件是仓库级的 `docs/icon.svg`。改完在仓库根目录运行
   `python .agents/skills/wows-app-icon/scripts/build_adaptive_icon.py` 重新生成
-  `drawable/ic_launcher_foreground.xml`，不要手改生成的 vector；流程见
-  [`.agents/skills/wows-app-icon/SKILL.md`](../.agents/skills/wows-app-icon/SKILL.md)。
+  `drawable/ic_launcher_foreground.xml`，不要手改生成的 vector；关于页用的
+  `drawable-nodpi/app_icon.png` 与 iOS 的 `AppIconPreview` 是同一张方形图标的副本，换图标时一起
+  覆盖。流程见 [`.agents/skills/wows-app-icon/SKILL.md`](../.agents/skills/wows-app-icon/SKILL.md)。
 - 文档按平台维护：用户可见变化更新 `android/README.md`，实现约定变化更新本文件；
   可复用的多步流程更新 `.agents/skills/` 下对应的 `SKILL.md`。
