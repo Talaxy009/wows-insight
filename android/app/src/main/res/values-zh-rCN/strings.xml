@@ -44,7 +44,7 @@
     <string name="player_charts_breakdown_tier">等级</string>
     <string name="player_charts_breakdown_title">评分分布</string>
     <string name="player_charts_no_data">该分类下没有数据。</string>
-    <string name="player_charts_trend_a11y">%2$s 至 %3$s 的%1$s，最新为 %5$s 的 %4$s。</string>
+    <string name="player_charts_trend_a11y">%2$s 至 %3$s 的%1$s，最新为 %4$s。</string>
     <string name="player_charts_trend_title">近期趋势</string>
     <string name="player_details_hit_rate">命中率</string>
     <string name="player_details_kd">击杀 / 死亡</string>

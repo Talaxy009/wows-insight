@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -26,12 +27,12 @@ import com.talaxy.wowsinsight.data.model.BattleMode
 import com.talaxy.wowsinsight.data.model.ChartMetric
 import com.talaxy.wowsinsight.data.model.DailyStats
 import com.talaxy.wowsinsight.data.model.ModeStats
+import com.talaxy.wowsinsight.data.model.RatingTier
 import com.talaxy.wowsinsight.ui.theme.ratingColor
 import com.talaxy.wowsinsight.ui.util.StatFormat
 import com.talaxy.wowsinsight.ui.util.labelRes
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
-import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -39,6 +40,12 @@ private data class TrendPoint(
     val day: LocalDate,
     val stats: ModeStats,
 )
+
+/** The service keeps the last week, so the axis always spans seven days. */
+private const val AXIS_DAYS = 7L
+
+/** One tick every other day: days 1, 3, 5 and 7 of the axis. */
+private const val AXIS_TICK_STEP = 2L
 
 /**
  * The rating or win rate of every recorded day, oldest on the left.
@@ -51,13 +58,18 @@ private data class TrendPoint(
 @Composable
 fun TrendChart(
     days: List<DailyStats>,
+    window: List<DailyStats>,
     mode: BattleMode,
     metric: ChartMetric,
     modifier: Modifier = Modifier,
 ) {
+    // The axis ends on the newest recorded day even when it has no battles, so
+    // a gap at the right edge does not move the ticks.
+    val axisEnd = (window.lastOrNull() ?: days.lastOrNull())?.day ?: return
+    val axisStart = axisEnd.minusDays(AXIS_DAYS - 1)
     val points = days.mapNotNull { day ->
         day.modes[mode]?.let { TrendPoint(day.day, it) }
-    }
+    }.filter { !it.day.isBefore(axisStart) }
     if (points.isEmpty()) return
 
     val dark = isSystemInDarkTheme()
@@ -65,27 +77,13 @@ fun TrendChart(
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLow
-    val pointColors = points.map { point ->
-        if (metric == ChartMetric.RATING) {
-            ratingColor(point.stats.rating.tier, dark)
-        } else {
-            primary
-        }
-    }
-    val first = points.first()
     val last = points.last()
-    val latestText = if (metric == ChartMetric.RATING) {
-        StatFormat.ratingText(last.stats.rating)
-    } else {
-        StatFormat.percent(last.stats.stats.winRate, digits = 1)
-    }
     val accessibility = stringResource(
         R.string.player_charts_trend_a11y,
         stringResource(metric.labelRes()),
-        StatFormat.date(first.day),
+        StatFormat.date(points.first().day),
         StatFormat.date(last.day),
-        latestText,
-        StatFormat.date(last.day),
+        metric.latestLabel(last.stats),
     )
 
     val textMeasurer = rememberTextMeasurer()
@@ -115,13 +113,13 @@ fun TrendChart(
         val upper = domain.endInclusive
         val span = upper - lower
 
-        val firstDay = points.first().day
-        val lastDay = points.last().day
-        val totalDays = max(1L, ChronoUnit.DAYS.between(firstDay, lastDay))
-        val horizontalInset = 0.04f
+        val totalDays = max(1L, ChronoUnit.DAYS.between(axisStart, axisEnd))
+        // Half a day on both ends keeps the outermost date centred on its line
+        // without running off the chart.
+        val horizontalInset = 0.5f / (totalDays + 1)
 
         fun xFor(day: LocalDate): Float {
-            val ratio = ChronoUnit.DAYS.between(firstDay, day).toFloat() / totalDays
+            val ratio = ChronoUnit.DAYS.between(axisStart, day).toFloat() / totalDays
             return plotLeft + plotWidth * (horizontalInset + ratio * (1 - 2 * horizontalInset))
         }
 
@@ -131,12 +129,7 @@ fun TrendChart(
         }
 
         // Horizontal grid and y-axis labels.
-        val ticks = if (metric == ChartMetric.WIN_RATE) {
-            ChartMath.percentageTicks(lower, upper)
-        } else {
-            ChartMath.niceTicks(lower, upper)
-        }
-        ticks.forEach { tick ->
+        metric.yTicks(lower, upper).forEach { tick ->
             if (tick < lower || tick > upper) return@forEach
             val y = yFor(tick)
             drawLine(
@@ -145,12 +138,10 @@ fun TrendChart(
                 end = Offset(plotRight, y),
                 strokeWidth = 1.dp.toPx(),
             )
-            val text = if (metric == ChartMetric.RATING) {
-                StatFormat.integer(tick.roundToInt())
-            } else {
-                StatFormat.percent(tick, digits = 0)
-            }
-            val layout = textMeasurer.measure(AnnotatedString(text), style = labelStyle)
+            val layout = textMeasurer.measure(
+                AnnotatedString(metric.axisLabel(tick)),
+                style = labelStyle,
+            )
             drawText(
                 textLayoutResult = layout,
                 topLeft = Offset(
@@ -161,38 +152,23 @@ fun TrendChart(
             )
         }
 
-        // X-axis labels, at most four, one per whole day.
-        val candidateDays = buildList {
-            add(firstDay)
-            val daySpan = ChronoUnit.DAYS.between(firstDay, lastDay)
-            if (daySpan > 0) {
-                val step = max(1, ceil(daySpan / 3.0).toInt())
-                var day = firstDay.plusDays(step.toLong())
-                while (day.isBefore(lastDay)) {
-                    add(day)
-                    day = day.plusDays(step.toLong())
-                }
-                add(lastDay)
-            }
-        }
-        var lastRight = -Float.MAX_VALUE
-        candidateDays.forEach { day ->
-            val text = StatFormat.chartDay(day)
-            val layout = textMeasurer.measure(AnnotatedString(text), style = labelStyle)
-            val centerX = xFor(day)
-            val leftX = (centerX - layout.size.width / 2f)
+        // X-axis labels on days 1, 3, 5 and 7 of the axis.
+        (0L until AXIS_DAYS step AXIS_TICK_STEP).forEach { offset ->
+            val day = axisStart.plusDays(offset)
+            val layout = textMeasurer.measure(
+                AnnotatedString(StatFormat.chartDay(day)),
+                style = labelStyle,
+            )
+            val leftX = (xFor(day) - layout.size.width / 2f)
                 .coerceIn(0f, size.width - layout.size.width)
-            if (leftX >= lastRight + 6.dp.toPx() || day == lastDay) {
-                drawText(
-                    textLayoutResult = layout,
-                    topLeft = Offset(leftX, plotBottom + 6.dp.toPx()),
-                )
-                lastRight = leftX + layout.size.width
-            }
+            drawText(
+                textLayoutResult = layout,
+                topLeft = Offset(leftX, plotBottom + 6.dp.toPx()),
+            )
         }
 
-        val offsets = points.map { point ->
-            Offset(xFor(point.day), yFor(metric.valueOf(point.stats)))
+        val offsets = points.mapIndexed { index, point ->
+            Offset(xFor(point.day), yFor(values[index]))
         }
 
         val linePath = Path().apply {
@@ -226,17 +202,37 @@ fun TrendChart(
             style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
         )
 
-        offsets.forEachIndexed { index, point ->
+        points.forEachIndexed { index, point ->
             drawCircle(
                 color = surfaceColor,
                 radius = 5.dp.toPx(),
-                center = point,
+                center = offsets[index],
             )
             drawCircle(
-                color = pointColors[index],
+                color = metric.pointColor(point.stats.rating.tier, dark, primary),
                 radius = 3.2.dp.toPx(),
-                center = point,
+                center = offsets[index],
             )
         }
     }
 }
+
+/** Ticks at a readable step for the plotted unit: round numbers, or percentages. */
+private fun ChartMetric.yTicks(lower: Double, upper: Double): List<Double> = when (this) {
+    ChartMetric.RATING -> ChartMath.niceTicks(lower, upper)
+    ChartMetric.WIN_RATE -> ChartMath.percentageTicks(lower, upper)
+}
+
+private fun ChartMetric.axisLabel(value: Double): String = when (this) {
+    ChartMetric.RATING -> StatFormat.integer(value.roundToInt())
+    ChartMetric.WIN_RATE -> StatFormat.percent(value, digits = 0)
+}
+
+/** The newest plotted value, as the card's accessibility description reads it. */
+private fun ChartMetric.latestLabel(stats: ModeStats): String = when (this) {
+    ChartMetric.RATING -> StatFormat.ratingText(stats.rating)
+    ChartMetric.WIN_RATE -> StatFormat.percent(stats.stats.winRate, digits = 1)
+}
+
+private fun ChartMetric.pointColor(tier: RatingTier, dark: Boolean, primary: Color): Color =
+    if (this == ChartMetric.RATING) ratingColor(tier, dark) else primary

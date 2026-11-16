@@ -44,7 +44,7 @@
     <string name="player_charts_breakdown_tier">티어</string>
     <string name="player_charts_breakdown_title">레이팅 분포</string>
     <string name="player_charts_no_data">이 분류의 데이터가 없습니다.</string>
-    <string name="player_charts_trend_a11y">%2$s부터 %3$s까지의 %1$s. 최신 값은 %5$s의 %4$s입니다.</string>
+    <string name="player_charts_trend_a11y">%2$s부터 %3$s까지의 %1$s. 최신 값은 %4$s입니다.</string>
     <string name="player_charts_trend_title">최근 추이</string>
     <string name="player_details_hit_rate">명중률</string>
     <string name="player_details_kd">격침 / 피격침</string>

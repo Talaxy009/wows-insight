@@ -13,8 +13,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.talaxy.wowsinsight.R
 import com.talaxy.wowsinsight.data.model.BattleMode
+import com.talaxy.wowsinsight.data.model.CategoryStats
 import com.talaxy.wowsinsight.data.model.ChartBreakdown
 import com.talaxy.wowsinsight.data.model.ChartMetric
+import com.talaxy.wowsinsight.data.model.DailyStats
 import com.talaxy.wowsinsight.data.model.PlayerReport
 import com.talaxy.wowsinsight.ui.components.BreakdownRows
 import com.talaxy.wowsinsight.ui.components.SectionCard
@@ -48,6 +50,7 @@ fun PlayerChartsSection(
         if (hasTrend) {
             TrendCard(
                 days = days,
+                window = report.dailyStats,
                 mode = mode,
                 metric = metric,
                 onMetricChange = onMetricChange,
@@ -67,7 +70,8 @@ fun PlayerChartsSection(
 
 @Composable
 private fun TrendCard(
-    days: List<com.talaxy.wowsinsight.data.model.DailyStats>,
+    days: List<DailyStats>,
+    window: List<DailyStats>,
     mode: BattleMode,
     metric: ChartMetric,
     onMetricChange: (ChartMetric) -> Unit,
@@ -83,14 +87,14 @@ private fun TrendCard(
             )
         },
     ) {
-        TrendChart(days = days, mode = mode, metric = metric)
+        TrendChart(days = days, window = window, mode = mode, metric = metric)
     }
 }
 
 @Composable
 private fun BreakdownCard(
-    shipTypeCategories: List<com.talaxy.wowsinsight.data.model.CategoryStats>,
-    tierCategories: List<com.talaxy.wowsinsight.data.model.CategoryStats>,
+    shipTypeCategories: List<CategoryStats>,
+    tierCategories: List<CategoryStats>,
     mode: BattleMode,
     breakdown: ChartBreakdown,
     onBreakdownChange: (ChartBreakdown) -> Unit,

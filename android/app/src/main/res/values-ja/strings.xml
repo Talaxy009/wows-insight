@@ -44,7 +44,7 @@
     <string name="player_charts_breakdown_tier">ティア</string>
     <string name="player_charts_breakdown_title">評価の内訳</string>
     <string name="player_charts_no_data">この内訳のデータはありません。</string>
-    <string name="player_charts_trend_a11y">%2$s から %3$s までの%1$s。最新は %5$s の %4$s。</string>
+    <string name="player_charts_trend_a11y">%2$s から %3$s までの%1$s。最新は %4$s。</string>
     <string name="player_charts_trend_title">最近の推移</string>
     <string name="player_details_hit_rate">命中率</string>
     <string name="player_details_kd">撃沈 / 被撃沈</string>

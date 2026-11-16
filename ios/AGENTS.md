@@ -89,8 +89,10 @@ ios/
   ①「近期趋势」用 Swift Charts 折线 + 面积画 `account/day/list/info` 的 `recentInfo`
   （每天一条当天战绩），在评分 / 胜率之间切换；面积的基线必须显式写成 y 轴下界
   （`AreaMark(yStart:yEnd:)`），默认基线是图表 frame 底部，会盖住日期轴并溢出卡片；少于两天
-  不画（一个点不是趋势），x 轴按整天取刻度避免同一天出现两个日期标签，胜率会把刻度略微放出
-  0–100 之外，免得 0% / 100% 的点被裁掉。②「评分分布」取 `info2` 的 `shipTypeInfo` /
+  不画（一个点不是趋势）。x 轴的窗口固定为「最后一条记录往前七天」（接口的每日记录最多一周），
+  刻度落在第 1 / 3 / 5 / 7 天，所以最后一天没有战斗时空隙出现在右侧、刻度也不会跳位；为此
+  `TrendCard` 同时接 `days`（当前类型有战斗的天，用来画点）和 `window`（整份记录，只用来定轴）。
+  胜率会把刻度略微放出 0–100 之外，免得 0% / 100% 的点被裁掉。②「评分分布」取 `info2` 的 `shipTypeInfo` /
   `levelInfo`，在舰种 / 等级之间切换；这张卡是自绘的条形行而不是 Swift Charts 的横向条形图
   ——iOS 26 上分类轴的标签会画进绘图区、和条形重叠。两张卡的选中项存在 `PlayerView` 里，
   因为 `LazyVStack` 回收卡片时会丢掉卡片自己的 `@State`。没有数据的卡片整张隐藏，所以服务端
@@ -98,7 +100,13 @@ ios/
   `Components.swift` 的 `CardHeader` 排版（图表卡、`StatCard`、战舰列表标题共用它）：
   默认和标题同一行、按内容取宽，**不要给它加固定 `maxWidth`**（以前写死 180pt，日文的
   「レーティング」会被省略号截断）；放不下时 `ViewThatFits` 会退回「标题 + 满宽控件」的两行
-  形态，所以标题也不能加 `lineLimit` 以外的压缩手段。
+  形态，所以标题也不能加 `lineLimit` 以外的压缩手段。趋势图的横坐标也**不用** `AxisValueLabel`：
+  日期轴会把标签居中在「每个刻度所在的 band」里，而网格线和数据点画在 band 的边上，两者差半个
+  band，看起来就像日期没对准虚线。现在虚线是 `RuleMark`（与数据点同一条 x），日期文字在
+  `chartOverlay` 里用 `proxy.position(forX:)` 定位、以该点为圆心居中，所以「虚线—点—日期」
+  三者同列；`chartPlotStyle` 的底部 padding 就是给这些文字留的高度，改字号时要同步
+  `xAxisLabelHeight`。日期**不要**夹回绘图区（以前会 `clamp` 到容器宽度）：最外侧的日期会被
+  推向中间、离开它那条虚线，而两端各半天的 inset 已经让文字有地方溢进 y 轴留白和卡片内边距。
 - **没有本地缓存**：评分、舰船名称、图标全部来自服务端，App 不打包期望值数据，也不往 Caches
   里写百科 JSON。
 - **收藏**：`FavoritesStore` 是 `@MainActor @Observable`，通过 `@Environment` 注入所有页面；

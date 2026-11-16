@@ -47,11 +47,11 @@ EXTRA = {
         "ko": "닫기",
     },
     "player_charts_trend_a11y": {
-        "en": "%1$s from %2$s to %3$s. Latest value %4$s on %5$s.",
-        "zh-Hans": "%2$s 至 %3$s 的%1$s，最新为 %5$s 的 %4$s。",
-        "zh-Hant": "%2$s 至 %3$s 的%1$s，最新為 %5$s 的 %4$s。",
-        "ja": "%2$s から %3$s までの%1$s。最新は %5$s の %4$s。",
-        "ko": "%2$s부터 %3$s까지의 %1$s. 최신 값은 %5$s의 %4$s입니다.",
+        "en": "%1$s from %2$s to %3$s, latest %4$s.",
+        "zh-Hans": "%2$s 至 %3$s 的%1$s，最新为 %4$s。",
+        "zh-Hant": "%2$s 至 %3$s 的%1$s，最新為 %4$s。",
+        "ja": "%2$s から %3$s までの%1$s。最新は %4$s。",
+        "ko": "%2$s부터 %3$s까지의 %1$s. 최신 값은 %4$s입니다.",
     },
     "player_charts_no_data": {
         "en": "No data for this breakdown.",

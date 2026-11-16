@@ -7,7 +7,6 @@ import com.talaxy.wowsinsight.ui.components.ChartMath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class ChartMathTest {
     @Test
@@ -29,10 +28,12 @@ class ChartMathTest {
     }
 
     @Test
-    fun dayStrideKeepsARecordedWeekAtAboutFourLabels() {
-        assertEquals(1, ChartMath.dayStride(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1)))
-        assertEquals(2, ChartMath.dayStride(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 8)))
-        assertEquals(3, ChartMath.dayStride(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 10)))
+    fun percentageTicksStartAtPositiveZeroBelowTheAxis() {
+        // The win-rate domain can dip under zero, and `ceil` of that ratio is
+        // -0.0, which the axis formatter printed as "-0%".
+        val ticks = ChartMath.percentageTicks(-8.0, 105.0)
+        assertEquals("0.0", ticks.first().toString())
+        assertEquals(listOf(0.0, 25.0, 50.0, 75.0, 100.0), ticks)
     }
 
     @Test

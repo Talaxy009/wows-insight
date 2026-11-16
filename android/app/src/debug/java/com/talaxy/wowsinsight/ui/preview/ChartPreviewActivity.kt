@@ -69,10 +69,20 @@ private fun ChartPreview() {
                 style = MaterialTheme.typography.titleLarge,
             )
             SectionCard(title = "Rating trend") {
-                TrendChart(days = days, mode = BattleMode.PVP, metric = ChartMetric.RATING)
+                TrendChart(
+                    days = days,
+                    window = days,
+                    mode = BattleMode.PVP,
+                    metric = ChartMetric.RATING,
+                )
             }
             SectionCard(title = "Win-rate trend") {
-                TrendChart(days = days, mode = BattleMode.PVP, metric = ChartMetric.WIN_RATE)
+                TrendChart(
+                    days = days,
+                    window = days,
+                    mode = BattleMode.PVP,
+                    metric = ChartMetric.WIN_RATE,
+                )
             }
             SectionCard(title = "Rating breakdown") {
                 BreakdownRows(categories = categories, mode = BattleMode.PVP)

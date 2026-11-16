@@ -3,8 +3,6 @@ package com.talaxy.wowsinsight.ui.components
 import com.talaxy.wowsinsight.data.model.BattleMode
 import com.talaxy.wowsinsight.data.model.CategoryStats
 import com.talaxy.wowsinsight.data.model.ChartMetric
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log10
@@ -39,16 +37,10 @@ object ChartMath {
         }
     }
 
-    /** One tick per whole day, at most about four labels on the x axis. */
-    fun dayStride(first: LocalDate, last: LocalDate): Int {
-        val days = ChronoUnit.DAYS.between(first, last).toInt()
-        return max(1, ceil(days / 4.0).toInt())
-    }
-
-    /** Round y ticks inside [lower]..[upper]. */
-    fun niceTicks(lower: Double, upper: Double, desiredCount: Int = 5): List<Double> {
+    /** Round y ticks inside [lower]..[upper], about five of them. */
+    fun niceTicks(lower: Double, upper: Double): List<Double> {
         if (upper <= lower) return listOf(lower)
-        val rawStep = (upper - lower) / (desiredCount - 1).coerceAtLeast(1)
+        val rawStep = (upper - lower) / 4
         val magnitude = 10.0.pow(floor(log10(rawStep)))
         val normalized = rawStep / magnitude
         val niceNormalized = when {
@@ -59,7 +51,7 @@ object ChartMath {
             else -> 10.0
         }
         val step = niceNormalized * magnitude
-        var value = ceil(lower / step) * step
+        var value = (ceil(lower / step) * step).withoutNegativeZero()
         val ticks = mutableListOf<Double>()
         while (value <= upper + step * 0.001 && ticks.size < 12) {
             ticks += value
@@ -76,7 +68,7 @@ object ChartMath {
             span <= 60.0 -> 10.0
             else -> 25.0
         }
-        var value = ceil(lower / step) * step
+        var value = (ceil(lower / step) * step).withoutNegativeZero()
         val ticks = mutableListOf<Double>()
         while (value <= upper + 0.001 && ticks.size < 12) {
             ticks += value
@@ -84,6 +76,12 @@ object ChartMath {
         }
         return ticks
     }
+
+    /**
+     * `ceil` answers -0.0 for a small negative input, and a formatter prints
+     * that as "-0%"; a tick on zero is zero.
+     */
+    private fun Double.withoutNegativeZero(): Double = if (this == 0.0) 0.0 else this
 
     fun breakdownScale(categories: List<CategoryStats>, mode: BattleMode): Double {
         val maximum = categories.maxOfOrNull { category ->
