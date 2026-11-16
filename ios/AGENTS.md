@@ -256,9 +256,14 @@ iOS 和 Android 由同一个[发布工作流](../.github/workflows/release.yml)�
 - 跑在 `xcode-27` 镜像上，用 Xcode 27 / iOS 27 SDK 构建。**不要退回旧镜像**：用 iOS 18 SDK
   构建的包在 iOS 26+ 上会走兼容外观，界面和本地用 Xcode 27 构建的不一致（`xcode-27`
   目前是 preview 标签，GA 后换成 `macos-27`）。
+- 版本号不要写进 `project.pbxproj`：target 的 base configuration 是仓库根目录的
+  [`version.xcconfig`](../version.xcconfig)，它把 `VERSION_NAME` / `VERSION_CODE` 映射成
+  `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`。也不要在 Xcode 的 General 页改 Version，
+  否则会把值写回 `project.pbxproj` 盖掉共享文件。
 - `version` 输入就是发布版本号（可带 `v` 前缀），例如 `1.0.1` → 标签 `v1.0.1`；
-  同时用 `MARKETING_VERSION=1.0.1` 覆盖工程里的版本号，`CURRENT_PROJECT_VERSION` 用 run number。
-- `version` 留空时用工程的 `MARKETING_VERSION`；标签已存在会直接报错，需要换一个版本号。
+  同时用 `MARKETING_VERSION=1.0.1` 覆盖 `version.xcconfig` 里的值，`CURRENT_PROJECT_VERSION`
+  用 run number。
+- `version` 留空时用 `version.xcconfig` 的 `VERSION_NAME`；标签已存在会直接报错，需要换一个版本号。
 - 产物是 `WoWsInsight-<version>.ipa`（`Payload/WoWsInsight.app`），同时上传成 Actions artifact；
   IPA **不签名**（`CODE_SIGNING_ALLOWED=NO`），使用者需要自己用 AltStore / Sideloadly / Xcode 重签。
 

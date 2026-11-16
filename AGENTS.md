@@ -30,6 +30,7 @@ Yuyuko 公共接口、统计口径和收藏文件格式。平台自己的实现�
 │   └── app/
 ├── docs/
 │   └── icon.svg                # 两个平台共用的应用图标源文件
+├── version.xcconfig            # 两个平台共用的版本号（iOS / Android / 发布工作流都读它）
 ├── .agents/
 │   └── skills/                 # 可复用流程：多语言、应用图标、收藏格式、发布、接口口径
 │       ├── wows-localization/SKILL.md
@@ -165,9 +166,14 @@ iOS 的 `Localizable.xcstrings` 是所有用户可见文案的唯一来源，And
 [`.github/workflows/release.yml`](./.github/workflows/release.yml) 是**手动触发**的
 （Actions → Release → Run workflow），一次构建两个平台，并发布到同一个 GitHub Release：
 
+- 两个平台共用的版本号只写在仓库根目录的 [`version.xcconfig`](./version.xcconfig)：
+  `VERSION_NAME` 是市场版本号，`VERSION_CODE` 是本地构建的构建号；iOS 通过 target 的
+  base configuration 把它们映射成 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`，
+  Android 的 `app/build.gradle.kts` 直接读取同一文件。发版时只改这一处。
 - `version` 输入是发布版本号（可带 `v` 前缀），例如 `1.0.1` → 标签 `v1.0.1`。留空时使用
-  iOS 工程的 `MARKETING_VERSION`，Android 的 `versionName` 也使用同一个值。
-- `versionCode` / `CURRENT_PROJECT_VERSION` 统一使用 workflow 的 run number。
+  `version.xcconfig` 的 `VERSION_NAME`；输入了则以输入为准（临时发版不用改文件）。
+- `versionCode` / `CURRENT_PROJECT_VERSION` 在 CI 统一使用 workflow 的 run number；
+  本地构建使用 `version.xcconfig` 的 `VERSION_CODE`。
 - 标签已存在会直接报错，需要换一个版本号。
 - 产物是 `WoWsInsight-<version>.ipa` 和 `WoWsInsight-<version>.apk`；iOS IPA **不签名**，
   需要使用者自己重签，Android APK 由 CI 用仓库里配置的 keystore **签名后发布**。

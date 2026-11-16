@@ -194,8 +194,10 @@ adb shell am start -n com.talaxy.wowsinsight/.ui.preview.ChartPreviewActivity
 
 ## 版本号与发布
 
-- `app/build.gradle.kts` 的 `versionName` / `versionCode` 支持用 Gradle 属性覆盖：
-  `-PversionName=1.2.0 -PversionCode=42`；不传时用默认值。
+- 版本号来自仓库根目录的 [`version.xcconfig`](../version.xcconfig)（与 iOS 共用）：
+  `app/build.gradle.kts` 读取 `VERSION_NAME` / `VERSION_CODE` 作为 `versionName` /
+  `versionCode` 的默认值。仍可用 Gradle 属性覆盖：`-PversionName=1.2.0 -PversionCode=42`
+  （CI 发布时就是这样注入的）。
 - 发布由根目录的[发布工作流](../.github/workflows/release.yml)手动触发，Android job 会：
   从 secrets 解码 keystore，用 `setup-java`（Temurin 21）+ `./gradlew :app:assembleRelease`
   构建签名包，执行 `apksigner verify` 后把产物重命名为 `WoWsInsight-<version>.apk` 并上传。
@@ -211,8 +213,8 @@ adb shell am start -n com.talaxy.wowsinsight/.ui.preview.ChartPreviewActivity
 - CI 使用四个 repository secrets：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、
   `ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。`ANDROID_KEYSTORE_BASE64` 是 keystore 文件的
   base64，不含换行也可以。keystore 和密码不能提交仓库。
-- `versionName` 使用发布输入（留空时取 iOS 工程的 `MARKETING_VERSION`），`versionCode` 使用
-  workflow 的 run number。两个平台共用一个版本号和同一个 Release。
+- `versionName` 使用发布输入（留空时取 `version.xcconfig` 的 `VERSION_NAME`），`versionCode`
+  使用 workflow 的 run number。两个平台共用一份 `version.xcconfig`、一个版本号和同一个 Release。
 - 发布前必须验证签名：未签名的 APK 不能进入 Release。
 - 发布需要仓库开启 Actions 的 **Read and write permissions**（见根 AGENTS.md）。
 - 发布 / 版本号 / 签名的完整检查清单见

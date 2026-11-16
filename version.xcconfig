@@ -1,0 +1,16 @@
+// 两个平台共享的版本号：这是唯一来源，发版时只改这个文件。
+//
+// iOS：ios/WoWsInsight.xcodeproj 的 target 以本文件为 base configuration，
+//      下面两行把共享键映射成 Xcode 的 MARKETING_VERSION / CURRENT_PROJECT_VERSION。
+// Android：android/app/build.gradle.kts 读取 VERSION_NAME / VERSION_CODE 作为默认值。
+// CI：发布工作流留空 version 时读取这里的 VERSION_NAME；CURRENT_PROJECT_VERSION /
+//      versionCode 仍用 workflow 的 run number 覆盖，本地构建则使用 VERSION_CODE。
+//
+// xcconfig 只认 // 注释，不要改成 #。
+
+VERSION_NAME = 1.1.0
+VERSION_CODE = 4
+
+// Xcode 直接使用的版本键，值来自上面的共享键。
+MARKETING_VERSION = $(VERSION_NAME)
+CURRENT_PROJECT_VERSION = $(VERSION_CODE)

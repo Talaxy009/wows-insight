@@ -1,13 +1,14 @@
 name: Release
 
 # 手动触发：打包已签名的 Android APK 与未签名的 iOS IPA，并发布到同一个 GitHub Release。
-# 版本号取输入的 version；留空时使用 iOS 工程的 MARKETING_VERSION，Android 的 versionName 与它一致。
+# 版本号取输入的 version；留空时使用仓库根目录 version.xcconfig 的 VERSION_NAME，
+# 两个平台的 versionName / MARKETING_VERSION 都来自这一份共享文件。
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号，例如 1.2.0。留空则使用 iOS 工程的 MARKETING_VERSION'
+        description: '版本号，例如 1.2.0。留空则使用 version.xcconfig 的 VERSION_NAME'
         required: false
         type: string
 
@@ -43,9 +44,9 @@ jobs:
           version="${version#v}"
 
           if [[ -z "${version}" ]]; then
-            version="$(sed -nE 's/.*MARKETING_VERSION = ([^;]+);.*/\1/p' \
-              ios/WoWsInsight.xcodeproj/project.pbxproj | sed -n '1p' | tr -d '[:space:]')"
-            echo "未输入版本号，使用 iOS 工程的 MARKETING_VERSION=${version}"
+            version="$(sed -nE 's/^[[:space:]]*VERSION_NAME[[:space:]]*=[[:space:]]*([^[:space:]]+).*$/\1/p' \
+              version.xcconfig | sed -n '1p')"
+            echo "未输入版本号，使用 version.xcconfig 的 VERSION_NAME=${version}"
           fi
 
           if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then

@@ -32,6 +32,36 @@ val hasReleaseSigning = listOf(
     releaseKeyPassword,
 ).all { !it.isNullOrBlank() }
 
+// 版本号的唯一来源是仓库根目录的 version.xcconfig（iOS 工程也引用同一个文件）。
+// CI 仍可用 -PversionName / -PversionCode 覆盖；本地构建不传时使用共享文件里的值。
+// 通过 providers.fileContents 读取，改版本号后 configuration cache 会自动失效。
+val sharedVersionFile = rootProject.layout.projectDirectory.file("../version.xcconfig")
+val sharedVersionText: String = providers.fileContents(sharedVersionFile).asText.get()
+
+fun sharedVersionValue(key: String): String =
+    sharedVersionText.lineSequence()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && !it.startsWith("//") }
+        .mapNotNull { line ->
+            val separator = line.indexOf('=')
+            if (separator <= 0) {
+                null
+            } else {
+                line.substring(0, separator).trim() to line.substring(separator + 1).trim()
+            }
+        }
+        .firstOrNull { (name, _) -> name == key }
+        ?.second
+        ?.takeIf { it.isNotEmpty() }
+        ?: error("${sharedVersionFile.asFile} 缺少 ${key}")
+
+val sharedVersionName: String =
+    (findProperty("versionName") as String?) ?: sharedVersionValue("VERSION_NAME")
+val sharedVersionCode: Int =
+    (findProperty("versionCode") as String?)?.toIntOrNull()
+        ?: sharedVersionValue("VERSION_CODE").toIntOrNull()
+        ?: error("version.xcconfig 的 VERSION_CODE 必须是整数")
+
 android {
     namespace = "com.talaxy.wowsinsight"
     compileSdk = 35
@@ -40,9 +70,9 @@ android {
         applicationId = "com.talaxy.wowsinsight"
         minSdk = 26
         targetSdk = 35
-        // CI 用 -PversionName / -PversionCode 覆盖；本地构建不传时使用默认值。
-        versionCode = (findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
-        versionName = (findProperty("versionName") as String?) ?: "1.0.0"
+        // 默认取 version.xcconfig；CI 用 -PversionName / -PversionCode 覆盖。
+        versionCode = sharedVersionCode
+        versionName = sharedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

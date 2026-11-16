@@ -10,10 +10,14 @@ workflow），一次构建 iOS 和 Android，发到同一个 GitHub Release。
 
 ## 版本规则
 
+- 两个平台共用一份版本号，唯一来源是仓库根目录的 `version.xcconfig`：`VERSION_NAME` 是市场
+  版本号，`VERSION_CODE` 是本地构建号；iOS target 把它们映射成 `MARKETING_VERSION` /
+  `CURRENT_PROJECT_VERSION`，Android 的 Gradle 直接读取同一文件。**发版只改这个文件**，
+  不要再往 `project.pbxproj` 或 `app/build.gradle.kts` 里写版本号。
 - 输入 `version` 可带 `v` 前缀：`1.0.1` → 标签 `v1.0.1`；格式必须是 `1.2` 或 `1.2.3`。
-- `version` 留空时取 iOS 工程的 `MARKETING_VERSION`。
+- `version` 留空时取 `version.xcconfig` 的 `VERSION_NAME`；输入了则以输入为准。
 - 两个平台共用同一个 `versionName`；`versionCode` / `CURRENT_PROJECT_VERSION` 都用
-  workflow run number。
+  workflow run number（覆盖文件里的 `VERSION_CODE`）。
 - 标签已存在时 workflow 直接失败，需要换一个版本号。
 - 产物：`WoWsInsight-<version>.ipa`（未签名）和 `WoWsInsight-<version>.apk`（已签名），
   同时作为 Actions artifact（`ios-ipa` / `android-apk`）保留 14 天。
@@ -47,5 +51,6 @@ workflow），一次构建 iOS 和 Android，发到同一个 GitHub Release。
 - 仓库 Settings → Actions → General → Workflow permissions 需要 **Read and write
   permissions**，否则 `gh release create` 会因 `GITHUB_TOKEN` 无写权限失败。
 - 发布前在 `android/` 跑 `./gradlew :app:testDebugUnitTest :app:lintDebug`。
-- 确认目标版本号没有被已有标签占用，四个 Android secrets 已配置。
+- 确认 `version.xcconfig` 的 `VERSION_NAME` 是目标版本（或用发布输入覆盖），目标版本号没有
+  被已有标签占用，四个 Android secrets 已配置。
 - 发布后核对 Release 里两个附件都存在且 APK 已签名。
