@@ -38,9 +38,10 @@ android/
 │       ├── theme/         // Material 3 颜色与字体
 │       └── util/          // 格式化、UiText、无障碍标签
 ├── app/src/debug/         // 仅 Debug 的图表预览 Activity
-├── app/src/test/          // JVM 单元测试
-└── icon.svg               // 应用图标源文件（生成脚本在 .agents/skills/wows-app-icon）
+└── app/src/test/          // JVM 单元测试
 ```
+
+应用图标源文件在仓库级的 `docs/icon.svg`（两个平台共用），不放在 `android/` 下。
 
 ## 架构与编码约定
 
@@ -223,7 +224,7 @@ adb shell am start -n com.talaxy.wowsinsight/.ui.preview.ChartPreviewActivity
 - 没有数据库：收藏是小 JSON，DataStore 足够；不要为一个页面引入 Room。
 - 没有 Hilt：新增依赖在 `AppContainer` 里显式创建，再通过 ViewModel factory 注入。
 - 不复制 iOS 的视觉细节；两端共享的是数据、评分和收藏文件，不是像素。
-- 应用图标源文件是 `android/icon.svg`。改完在仓库根目录运行
+- 应用图标源文件是仓库级的 `docs/icon.svg`。改完在仓库根目录运行
   `python .agents/skills/wows-app-icon/scripts/build_adaptive_icon.py` 重新生成
   `drawable/ic_launcher_foreground.xml`，不要手改生成的 vector；流程见
   [`.agents/skills/wows-app-icon/SKILL.md`](../.agents/skills/wows-app-icon/SKILL.md)。

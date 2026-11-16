@@ -27,9 +27,9 @@ Yuyuko 公共接口、统计口径和收藏文件格式。平台自己的实现�
 ├── android/                    # 原生 Android 客户端
 │   ├── README.md
 │   ├── AGENTS.md
-│   ├── app/
-│   ├── docs/
-│   └── icon.svg                # 应用图标源文件
+│   └── app/
+├── docs/
+│   └── icon.svg                # 两个平台共用的应用图标源文件
 ├── .agents/
 │   └── skills/                 # 可复用流程：多语言、应用图标、收藏格式、发布、接口口径
 │       ├── wows-localization/SKILL.md
@@ -194,6 +194,8 @@ iOS 的镜像/签名注意事项见 [ios/AGENTS.md](./ios/AGENTS.md)，Android �
 - `ios/README.md`、`android/README.md`：用户视角的平台文档（运行、构建、发布、平台限制）。
 - 根 `AGENTS.md`：共享接口口径、收藏格式、发布流程、文档规则。
 - `ios/AGENTS.md`、`android/AGENTS.md`：该平台的实现细节、代码约定、调试方法。
+- `docs/`：两个平台共用的素材，目前只有应用图标源文件 `docs/icon.svg`（根 README 的
+  Logo 也引用它）；平台专属的素材仍然放在对应平台目录里。
 - `.agents/skills/<name>/SKILL.md`：跨平台的多步流程（目前有 `wows-localization`、
   `wows-app-icon`、`wows-favorites-archive`、`wows-release`、`wows-yuyuko-api`），配套脚本放在
   同名目录的 `scripts/` 下。写流程而不是重复平台细节，平台细节仍然放在对应的 `AGENTS.md`。

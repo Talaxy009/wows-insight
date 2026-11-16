@@ -1,7 +1,6 @@
 # WoWs Insight for iOS
 
-原生 SwiftUI 客户端，功能与仓库里的 [Android 版本](../android/README.md) 对齐，共用同一套
-[Yuyuko](https://v3-api.wows.shinoaki.com/v3/index.html) 公共接口和统计口径。
+原生 SwiftUI 客户端，功能与仓库里的 [Android 版本](../android/README.md) 对齐，共用同一套 [Yuyuko](https://v3-api.wows.shinoaki.com/v3/index.html) 公共接口和统计口径。
 
 - 系统要求：iOS 18.0+
 - 开发环境：Xcode 16 或更新版本、Swift 6（严格并发）
@@ -50,9 +49,7 @@ xcodebuild -project WoWsInsight.xcodeproj -scheme WoWsInsight \
 
 ## 发布
 
-发布由仓库根目录的 [`.github/workflows/release.yml`](../.github/workflows/release.yml) 手动触发
-（Actions → Release → Run workflow），一次同时构建 iOS 和 Android。iOS 侧产物是
-`WoWsInsight-<版本>.ipa`：
+发布由仓库根目录的 [`.github/workflows/release.yml`](../.github/workflows/release.yml) 手动触发（Actions → Release → Run workflow），一次同时构建 iOS 和 Android。iOS 侧产物是 `WoWsInsight-<版本>.ipa`：
 
 - IPA **不签名**（`CODE_SIGNING_ALLOWED=NO`），需要自己用 AltStore / Sideloadly / Xcode 重签。
 - 重签名时，描述文件的 App ID 必须等于 `PRODUCT_BUNDLE_IDENTIFIER`。否则 App 能启动、界面正常，
@@ -85,8 +82,7 @@ ios/
 
 ## 多语言
 
-界面语言由 iOS 根据系统语言自动选择，App 内没有切换开关。所有用户可见文案都在
-`Localizable.xcstrings` 里，代码通过 `L10n.swift` 的语义化 key 引用。
+界面语言由 iOS 根据系统语言自动选择，App 内没有切换开关。所有用户可见文案都在 `Localizable.xcstrings` 里，代码通过 `L10n.swift` 的语义化 key 引用。
 
 - 简体中文 → 界面中文，战舰名称用 `nameCn`
 - 繁体中文 → 界面繁体中文，战舰名称仍用 `nameCn`（接口只提供简体舰名）

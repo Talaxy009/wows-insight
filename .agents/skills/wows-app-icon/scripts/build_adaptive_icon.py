@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the Android launcher foreground from ``android/icon.svg``.
+"""Build the Android launcher foreground from ``docs/icon.svg``.
 
 The background is the solid ``#0599FC`` color; everything else in the SVG
 (ship and waves) becomes the foreground layer. Both layers are vectors, so the
@@ -16,7 +16,7 @@ from xml.sax.saxutils import escape
 
 # .agents/skills/wows-app-icon/scripts/build_adaptive_icon.py
 ROOT = Path(__file__).resolve().parents[4]
-SOURCE = ROOT / "android" / "icon.svg"
+SOURCE = ROOT / "docs" / "icon.svg"
 RES = ROOT / "android" / "app" / "src" / "main" / "res"
 
 ELEMENT_RE = re.compile(r"<(path|rect|circle)\b([^>]*)/>", re.S)
@@ -94,7 +94,7 @@ def main() -> None:
         None,
     )
     if background is None:
-        raise SystemExit("android/icon.svg: background rect not found")
+        raise SystemExit("docs/icon.svg: background rect not found")
 
     foreground_elements = [
         (element, attrs)

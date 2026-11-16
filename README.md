@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Logo" src="./ios/WoWsInsight/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="80" />
+  <img alt="Logo" src="./docs/icon.svg" width="128" />
 </p>
 <h1 align="center">
   WoWs Insight
@@ -10,9 +10,9 @@
 
 ## 平台
 
-| 平台 | 技术栈 | 系统要求 | 文档 |
-| --- | --- | --- | --- |
-| iOS | Swift 6 · SwiftUI · Observation | iOS 18.0+ | [ios/README.md](./ios/README.md) |
+| 平台    | 技术栈                                | 系统要求                    | 文档                                     |
+| ------- | ------------------------------------- | --------------------------- | ---------------------------------------- |
+| iOS     | Swift 6 · SwiftUI · Observation       | iOS 18.0+                   | [ios/README.md](./ios/README.md)         |
 | Android | Kotlin · Jetpack Compose · Material 3 | Android 8.0（API 26）及以上 | [android/README.md](./android/README.md) |
 
 两个客户端功能对齐、共用同一套 Yuyuko 接口，收藏的 JSON 导出格式也完全互通，可以在 iOS
@@ -59,9 +59,9 @@
 ├── android/                      # 原生 Android 客户端（Kotlin / Compose）
 │   ├── README.md
 │   ├── AGENTS.md
-│   ├── app/
-│   ├── docs/
-│   └── icon.svg                  # 应用图标源文件
+│   └── app/
+├── docs/
+│   └── icon.svg                  # 两个平台共用的应用图标源文件
 ├── .agents/skills/               # 可复用流程：多语言、应用图标、收藏、发布、接口
 ├── .github/workflows/            # 手动触发的发布流水线（IPA + APK）
 ├── README.md                     # 本文件：仓库总览与共用说明
