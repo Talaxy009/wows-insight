@@ -8,8 +8,8 @@
 //
 // xcconfig 只认 // 注释，不要改成 #。
 
-VERSION_NAME = 1.1.0
-VERSION_CODE = 4
+VERSION_NAME = 1.2.0
+VERSION_CODE = 5
 
 // Xcode 直接使用的版本键，值来自上面的共享键。
 MARKETING_VERSION = $(VERSION_NAME)
