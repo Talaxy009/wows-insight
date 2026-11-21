@@ -90,9 +90,13 @@ ios/
   ①「近期趋势」用 Swift Charts 折线 + 面积画 `account/day/list/info` 的 `recentInfo`
   （每天一条当天战绩），在评分 / 胜率之间切换；面积的基线必须显式写成 y 轴下界
   （`AreaMark(yStart:yEnd:)`），默认基线是图表 frame 底部，会盖住日期轴并溢出卡片；少于两天
-  不画（一个点不是趋势）。x 轴的窗口固定为「最后一条记录往前七天」（接口的每日记录最多一周），
-  刻度落在第 1 / 3 / 5 / 7 天，所以最后一天没有战斗时空隙出现在右侧、刻度也不会跳位；为此
-  `TrendCard` 同时接 `days`（当前类型有战斗的天，用来画点）和 `window`（整份记录，只用来定轴）。
+  不画（一个点不是趋势）。x 轴的窗口固定为「最后一条记录往前七天」，刻度落在第 1 / 3 / 5 / 7
+  天，所以最后一天没有战斗时空隙出现在右侧、刻度也不会跳位；为此 `TrendCard` 同时接 `days`
+  （当前类型有战斗的天，用来画点）和 `window`（整份记录，只用来定轴）。**窗口外的记录必须丢掉**：
+  接口按天保留快照，可能给出早于七天前的记录（例如 11/11、11/15、11/19 三条，最新一条往前七天
+  的窗口从 11/13 起），而 Swift Charts 不会把 x 域外的 mark 裁进绘图区——那个点会连同折线、面积
+  一起画到绘图区左侧、压住 y 轴标签并溢出卡片。`TrendCard.plottedDays` 只保留窗口内的天，趋势卡
+  是否出现也按过滤后的条数（`> 1`）判断；Android 的 `TrendChart` 用同样的过滤。
   胜率会把刻度略微放出 0–100 之外，免得 0% / 100% 的点被裁掉。②「评分分布」取 `info2` 的 `shipTypeInfo` /
   `levelInfo`，在舰种 / 等级之间切换；这张卡是自绘的条形行而不是 Swift Charts 的横向条形图
   ——iOS 26 上分类轴的标签会画进绘图区、和条形重叠。两张卡的选中项存在 `PlayerView` 里，
@@ -134,7 +138,10 @@ ios/
   `AppIconPreview`（`AppIcon.png` 的副本；`Image("AppIcon")` 不能可靠地按名字加载应用图标），
   版本号读 `CFBundleShortVersionString` / `CFBundleVersion`（来自 `version.xcconfig` 映射的
   `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`），文案全部走 `L10n.About`。GitHub / Yuyuko
-  用 `Link` 交给系统打开，VoiceOver 会把整行读成链接。
+  用 `Link` 交给系统打开，VoiceOver 会把整行读成链接。链接行里的文字用 `Color.primary` /
+  `Color.secondary` 这类具体颜色，**不要**用层级 `.primary` / `.secondary`：`Link` 里的层级样式
+  会相对链接 tint（深色的 AccentColor）解析，深色模式下文字会变成几乎看不见的深蓝；Android
+  的关于页同样用 label / secondary 颜色。
 - **字体**：字号统一走 `Theme.swift` 里的语义化 `Font` token（`statLabel` / `statValue` /
   `detailValue` / `rowSubtitle` / `rowChevron` / `ratingValue` / `ratingTier`），全部基于
   text style 以跟随 Dynamic Type。可读文字最小用 `footnote`（默认 13pt）；`caption` /

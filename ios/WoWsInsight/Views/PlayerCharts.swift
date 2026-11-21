@@ -16,9 +16,10 @@ struct PlayerChartsSection: View {
 
     var body: some View {
         let days = report.dailyStats(for: mode)
+        let trendDays = TrendCard.plottedDays(days: days, window: report.dailyStats)
         let categories = report.categories(.shipType, for: mode)
-        // One record is a number, not a trend.
-        let hasTrend = days.count > 1
+        // One record is a number, not a trend. Only the records inside the axis window count: older ones are not drawn at all.
+        let hasTrend = trendDays.count > 1
 
         if hasTrend || !categories.isEmpty {
             VStack(spacing: 16) {
@@ -51,15 +52,35 @@ private struct TrendCard: View {
     @Binding var metric: ChartMetric
 
     private var points: [TrendPoint] {
-        days.compactMap { day in
+        Self.plottedDays(days: days, window: window).compactMap { day in
             day.modes[mode].map { TrendPoint(day: day.day, stats: $0) }
         }
     }
 
-    /// The service keeps the last week, so the axis always spans seven days
-    /// ending on the last recorded one. That puts the every-other-day ticks on
-    /// days 1 / 3 / 5 / 7 whether or not every day has battles.
+    /// The trend shows the last week of recorded days, so the axis always spans
+    /// seven days ending on the last recorded one. That puts the every-other-day
+    /// ticks on days 1 / 3 / 5 / 7 whether or not every day has battles.
     private static let axisDays = 7
+
+    /// The recorded days that fall inside the seven-day axis.
+    ///
+    /// The service returns one record per snapshot it kept, and those records
+    /// can reach further back than a week (an observed account can hold a
+    /// record from ten days ago next to one from two days ago). Swift Charts
+    /// does not clip marks to the x domain: a point before the first day would
+    /// be drawn past the leading edge of the plot, over the y-axis labels and
+    /// outside the card, and the line and the area would follow it out. Only
+    /// the days inside the window are plotted; the Android chart drops the
+    /// same older days.
+    static func plottedDays(days: [DailyStats], window: [DailyStats]) -> [DailyStats] {
+        guard
+            let end = window.last?.day ?? days.last?.day,
+            let start = Calendar.current.date(byAdding: .day, value: 1 - axisDays, to: end)
+        else {
+            return []
+        }
+        return days.filter { $0.day >= start }
+    }
 
     var body: some View {
         // Every mark below reads the scale, so it is worked out once rather

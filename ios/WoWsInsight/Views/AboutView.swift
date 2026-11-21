@@ -153,11 +153,11 @@ private struct AboutLinkRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.body)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(subtitle)
                     .font(.rowSubtitle)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -165,7 +165,7 @@ private struct AboutLinkRow: View {
 
             Image(systemName: "arrow.up.right")
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondary)
                 .accessibilityHidden(true)
         }
         .padding(.vertical, 6)
