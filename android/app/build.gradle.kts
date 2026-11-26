@@ -62,6 +62,9 @@ val sharedVersionCode: Int =
         ?: sharedVersionValue("VERSION_CODE").toIntOrNull()
         ?: error("version.xcconfig 的 VERSION_CODE 必须是整数")
 
+// 产物名固定为 WoWsInsight-<version>-<buildType>.apk，发布流程直接按这个名字取包。
+base.archivesName.set("WoWsInsight-$sharedVersionName")
+
 android {
     namespace = "com.talaxy.wowsinsight"
     compileSdk = 35

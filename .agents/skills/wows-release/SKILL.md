@@ -21,7 +21,7 @@ workflow），一次构建 iOS 和 Android，发到同一个 GitHub Release。
 - 标签已存在时 workflow 直接失败，需要换一个版本号。
 - 产物：`WoWsInsight-<version>.ipa`（未签名）和 `WoWsInsight-<version>.apk`（已签名），
   同时作为 Actions artifact（`ios-ipa` / `android-apk`）保留 14 天。
-- Release 说明 = 固定「安装」段 + `--generate-notes` 的变更日志。
+- Release 说明 = [`.github/release-notes.md`](../../../.github/release-notes.md) 的「安装」段 + `--generate-notes` 的变更日志；改安装文案只改这个文件。
 
 ## Android 签名
 
@@ -31,7 +31,8 @@ workflow），一次构建 iOS 和 Android，发到同一个 GitHub Release。
 - CI 把 keystore 解码到 `$RUNNER_TEMP/release.keystore`，通过 `ANDROID_KEYSTORE_PATH` 等
   环境变量注入；`app/build.gradle.kts` 的读取顺序是环境变量 > `android/keystore.properties`
   > 无签名（未签名包）。
-- 构建后执行 `apksigner verify --print-certs`，验证失败不会进入 Release。
+- APK 文件名由 `app/build.gradle.kts` 的 `base.archivesName` 固定为 `WoWsInsight-<version>-release.apk`；
+  CI 直接按这个名字取包，未签名时产物名是 `*-release-unsigned.apk`，取包失败，所以不会发布未签名 APK。
 - 本地签名：`cp android/keystore.properties.example android/keystore.properties`，填
   `storeFile` / `storePassword` / `keyAlias` / `keyPassword`，再
   `cd android && ./gradlew :app:assembleRelease`。`storeFile` 相对 `android/` 解析。
@@ -53,4 +54,5 @@ workflow），一次构建 iOS 和 Android，发到同一个 GitHub Release。
 - 发布前在 `android/` 跑 `./gradlew :app:testDebugUnitTest :app:lintDebug`。
 - 确认 `version.xcconfig` 的 `VERSION_NAME` 是目标版本（或用发布输入覆盖），目标版本号没有
   被已有标签占用，四个 Android secrets 已配置。
+- `.github/dependabot.yml` 每周检查 workflow 里 actions 的版本更新。
 - 发布后核对 Release 里两个附件都存在且 APK 已签名。

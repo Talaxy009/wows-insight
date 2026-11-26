@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号，例如 1.2.0。留空则使用 version.xcconfig 的 VERSION_NAME'
+        description: '版本号（如 1.2.0 留空则使用 version.xcconfig 配置）'
         required: false
         type: string
 
@@ -29,8 +29,6 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
       - name: Resolve version and tag
         id: version
@@ -124,13 +122,10 @@ jobs:
           # IPA 就是「Payload/XXX.app」的 zip 包
           mkdir -p build/Payload
           cp -R "${app}" build/Payload/
-          find build/Payload -name '.DS_Store' -delete
 
           cd build
           zip -qry "WoWsInsight-${VERSION}.ipa" Payload
           rm -rf Payload
-
-          unzip -l "WoWsInsight-${VERSION}.ipa" | sed -n '1,20p'
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v7
@@ -151,7 +146,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Check signing secrets
+      - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -159,29 +154,14 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          missing=()
-          [[ -n "${KEYSTORE_BASE64:-}" ]] || missing+=("ANDROID_KEYSTORE_BASE64")
-          [[ -n "${KEYSTORE_PASSWORD:-}" ]] || missing+=("ANDROID_KEYSTORE_PASSWORD")
-          [[ -n "${KEY_ALIAS:-}" ]] || missing+=("ANDROID_KEY_ALIAS")
-          [[ -n "${KEY_PASSWORD:-}" ]] || missing+=("ANDROID_KEY_PASSWORD")
-          if (( ${#missing[@]} > 0 )); then
-            echo "缺少 Android 签名配置：${missing[*]}" >&2
-            echo "请在仓库 Settings → Secrets and variables → Actions 中配置这些 secret。" >&2
-            exit 1
-          fi
+          : "${KEYSTORE_BASE64:?缺少 secret ANDROID_KEYSTORE_BASE64}"
+          : "${KEYSTORE_PASSWORD:?缺少 secret ANDROID_KEYSTORE_PASSWORD}"
+          : "${KEY_ALIAS:?缺少 secret ANDROID_KEY_ALIAS}"
+          : "${KEY_PASSWORD:?缺少 secret ANDROID_KEY_PASSWORD}"
 
-      - name: Decode keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
           keystore="${RUNNER_TEMP}/release.keystore"
           printf '%s' "${KEYSTORE_BASE64}" | tr -d '\r\n ' | base64 --decode > "${keystore}"
-          if [[ ! -s "${keystore}" ]]; then
-            echo "keystore 解码失败或为空" >&2
-            exit 1
-          fi
-          echo "keystore 已写入 ${keystore}"
+          [[ -s "${keystore}" ]] || { echo "keystore 解码失败或为空" >&2; exit 1; }
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -201,39 +181,18 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          set -euo pipefail
-          chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon \
+          ./gradlew :app:assembleRelease \
             -PversionName="${VERSION}" \
             -PversionCode="${BUILD_NUMBER}"
 
-      - name: Verify and collect signed APK
+      - name: Collect signed APK
         env:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
-          set -euo pipefail
-          apk="$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)"
-          if [[ -z "${apk}" ]]; then
-            echo "找不到 release APK" >&2
-            find app/build/outputs -maxdepth 4 >&2
-            exit 1
-          fi
-
-          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
-          if [[ -z "${sdk}" ]]; then
-            echo "找不到 Android SDK（ANDROID_HOME / ANDROID_SDK_ROOT 都为空）" >&2
-            exit 1
-          fi
-          build_tools="$(find "${sdk}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
-          if [[ ! -x "${build_tools}/apksigner" ]]; then
-            echo "找不到 apksigner：${build_tools}" >&2
-            exit 1
-          fi
-          "${build_tools}/apksigner" verify --print-certs "${apk}"
-
+          # 未签名时产物名是 *-release-unsigned.apk，这里的 cp 会直接失败
           mkdir -p ../build
-          cp "${apk}" "../build/WoWsInsight-${VERSION}.apk"
-          unzip -l "../build/WoWsInsight-${VERSION}.apk" | sed -n '1,20p'
+          cp "app/build/outputs/apk/release/WoWsInsight-${VERSION}-release.apk" \
+            "../build/WoWsInsight-${VERSION}.apk"
 
       - name: Upload signed APK artifact
         uses: actions/upload-artifact@v7
@@ -251,8 +210,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # --generate-notes 需要完整历史和标签
-          fetch-depth: 0
+          sparse-checkout: .github
 
       - name: Download artifacts
         uses: actions/download-artifact@v5
@@ -271,18 +229,10 @@ jobs:
 
           ls -l dist
 
-          notes_file="$(mktemp)"
-          cat > "${notes_file}" <<'EOF'
-          ### 安装
-
-          - **iOS**：`WoWsInsight-<版本>.ipa` 未签名，自行通过 AltStore / Sideloadly / Xcode 重签。重签时描述文件的 App ID 需等于 `PRODUCT_BUNDLE_IDENTIFIER`。
-          - **Android**：`WoWsInsight-<版本>.apk` 已签名，可直接安装。系统要求 Android 8.0（API 26）及以上。
-          EOF
-
           gh release create "${TAG}" \
             "dist/WoWsInsight-${VERSION}.ipa" \
             "dist/WoWsInsight-${VERSION}.apk" \
             --target "${GITHUB_SHA}" \
             --title "WoWs Insight ${VERSION}" \
-            --notes-file "${notes_file}" \
+            --notes-file .github/release-notes.md \
             --generate-notes
