@@ -103,6 +103,7 @@ enum L10n {
             L10n.format("player.accountIdWithServer", server, id)
         }
 
+        static var clan: String { L10n.text("player.clan") }
         static var registered: String { L10n.text("player.registered") }
         static var lastBattle: String { L10n.text("player.lastBattle") }
 

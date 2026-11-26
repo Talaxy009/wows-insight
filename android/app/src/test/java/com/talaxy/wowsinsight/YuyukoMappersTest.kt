@@ -5,6 +5,7 @@ import com.talaxy.wowsinsight.data.model.CategoryKey
 import com.talaxy.wowsinsight.data.model.GameServer
 import com.talaxy.wowsinsight.data.model.ShipNameLanguage
 import com.talaxy.wowsinsight.data.remote.ApiException
+import com.talaxy.wowsinsight.data.remote.YuyukoClanInfo
 import com.talaxy.wowsinsight.data.remote.YuyukoMax
 import com.talaxy.wowsinsight.data.remote.YuyukoMaxValue
 import com.talaxy.wowsinsight.data.remote.YuyukoModeSummary
@@ -203,5 +204,28 @@ class YuyukoMappersTest {
         assertEquals("Yamato", overview.account.nickname)
         assertNull(overview.account.createdAt)
         assertEquals(1, overview.modes.size)
+    }
+
+    @Test
+    fun accountOverviewFormatsTheClan() {
+        val overview = YuyukoUserInfoData(
+            userInfo = YuyukoUserDetail(
+                userName = "Detergent",
+                clanInfo = YuyukoClanInfo(tag = "O7", name = "Praefecti naumachia"),
+            ),
+        ).toAccountOverview(
+            fallbackAccountId = 2_000_041_943,
+            language = ShipNameLanguage.ENGLISH,
+            server = GameServer.ASIA,
+        )
+
+        assertEquals("[O7] Praefecti naumachia", overview.account.clanName)
+    }
+
+    @Test
+    fun clanDisplayNameUsesWhicheverPartExists() {
+        assertEquals("[O7]", YuyukoClanInfo(tag = "O7", name = " ").displayName)
+        assertEquals("Solo Sailors", YuyukoClanInfo(name = "Solo Sailors").displayName)
+        assertNull(YuyukoClanInfo(tag = "", name = "").displayName)
     }
 }

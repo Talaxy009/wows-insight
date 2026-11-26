@@ -39,6 +39,9 @@ description: Integrate or debug the Yuyuko public API used by both WoWs Insight 
   声明顺序即选择器顺序，未知代码忽略，默认 `PVP`。只有 `battleCount > 0` 的类型才显示。
 - `account/user/info2` 的 `battleTypeInfo[code].shipInfo` 与 `ship/info/list` 的
   `typeInfo[code].battleInfo` 是同一套 `BattleInfoData`，只是字段名不同。
+- `account/user/info2` 的 `userInfo.clanInfo` 是账号当前公会（`tag` / `name`）。无公会时
+  `clanId == 0`、两个字符串为空，按「没有公会」处理，不要显示空标签；有公会时两端统一显示为
+  `[TAG] Name`，缺一项时只显示存在的那一项。
 - 评分按当前类型取 `prInfo.value`（玩家取 `battleTypeInfo[code]`，战舰取 `typeInfo[code]`）；
   顶层 `prInfo` 是全部模式口径，不使用。`prInfo.code == 0` 表示暂无数据，显示 `—`。
 - 每日记录在 `recentInfo`，按天给出当天战绩；服务端只为观察过的账号保留，少于两天不画趋势图。

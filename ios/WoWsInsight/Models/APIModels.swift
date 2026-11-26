@@ -16,6 +16,8 @@ struct AccountInfo: Sendable {
     let lastBattleTime: Int?
     /// The in-game dog tag shown next to the nickname.
     let dogTagURL: URL?
+    /// "[TAG] Name" of the current clan, or `nil` when the account is not in one.
+    let clanName: String?
 }
 
 /// One ship of the encyclopedia as rendered by the app.

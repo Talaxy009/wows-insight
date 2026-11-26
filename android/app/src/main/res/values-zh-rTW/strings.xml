@@ -56,6 +56,7 @@
     <string name="player_charts_no_data">該分類下沒有資料。</string>
     <string name="player_charts_trend_a11y">%2$s 至 %3$s 的%1$s，最新為 %4$s。</string>
     <string name="player_charts_trend_title">近期趨勢</string>
+    <string name="player_clan">公會</string>
     <string name="player_details_hit_rate">命中率</string>
     <string name="player_details_kd">擊殺 / 死亡</string>
     <string name="player_details_planes_destroyed">擊落飛機</string>

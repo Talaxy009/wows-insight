@@ -46,6 +46,25 @@ struct YuyukoUserDetail: Decodable, Sendable {
     let accountCreateTime: Int?
     /// Absolute URL of the in-game dog tag image.
     let dogTag: String?
+    /// Blank strings when the account is not in a clan.
+    let clanInfo: YuyukoClanInfo?
+}
+
+struct YuyukoClanInfo: Decodable, Sendable {
+    let tag: String?
+    let name: String?
+
+    /// "[TAG] Name", or whichever part is present; `nil` without a clan.
+    var displayName: String? {
+        let tag = tag?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        switch (tag.isEmpty, name.isEmpty) {
+        case (false, false): return "[\(tag)] \(name)"
+        case (true, false): return name
+        case (false, true): return "[\(tag)]"
+        case (true, true): return nil
+        }
+    }
 }
 
 struct YuyukoModeSummary: Decodable, Sendable {

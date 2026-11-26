@@ -35,7 +35,28 @@ data class YuyukoUserDetail(
     val accountCreateTime: Int? = null,
     /** Absolute URL of the in-game dog tag image. */
     val dogTag: String? = null,
+    /** Blank strings when the account is not in a clan. */
+    val clanInfo: YuyukoClanInfo? = null,
 )
+
+@Serializable
+data class YuyukoClanInfo(
+    val tag: String? = null,
+    val name: String? = null,
+) {
+    /** "[TAG] Name", or whichever part is present; `null` without a clan. */
+    val displayName: String?
+        get() {
+            val tag = tag?.trim().orEmpty()
+            val name = name?.trim().orEmpty()
+            return when {
+                tag.isNotEmpty() && name.isNotEmpty() -> "[$tag] $name"
+                name.isNotEmpty() -> name
+                tag.isNotEmpty() -> "[$tag]"
+                else -> null
+            }
+        }
+}
 
 @Serializable
 data class YuyukoRecentDaysData(

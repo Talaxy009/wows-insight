@@ -322,6 +322,13 @@ private fun PlayerHeaderCard(
             HorizontalDivider()
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                account.clanName?.let { clanName ->
+                    InfoRow(
+                        label = stringResource(R.string.player_clan),
+                        value = clanName,
+                        valueMaxLines = 2,
+                    )
+                }
                 InfoRow(
                     label = stringResource(R.string.player_registered),
                     value = StatFormat.date(account.createdAt),

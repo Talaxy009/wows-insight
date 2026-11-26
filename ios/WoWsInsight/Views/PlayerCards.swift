@@ -28,6 +28,9 @@ struct PlayerHeaderCard: View {
             Divider()
 
             VStack(spacing: 8) {
+                if let clanName = account.clanName {
+                    InfoRow(title: L10n.Player.clan, value: clanName, lineLimit: 2)
+                }
                 InfoRow(title: L10n.Player.registered, value: StatFormat.date(account.createdAt))
                 InfoRow(title: L10n.Player.lastBattle, value: StatFormat.date(account.lastBattleTime))
             }
@@ -309,14 +312,17 @@ private struct StatCard<Content: View>: View {
 private struct InfoRow: View {
     let title: String
     let value: String
+    var lineLimit: Int = 1
 
     var body: some View {
-        HStack {
+        HStack(alignment: .top) {
             Text(title)
                 .foregroundStyle(.secondary)
-            Spacer()
+            Spacer(minLength: 16)
             Text(value)
                 .monospacedDigit()
+                .multilineTextAlignment(.trailing)
+                .lineLimit(lineLimit)
         }
         .font(.subheadline)
     }

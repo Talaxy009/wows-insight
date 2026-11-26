@@ -1801,6 +1801,42 @@
         }
       }
     },
+    "player.clan" : {
+      "comment" : "Label of the clan row on the player header.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clan"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クラン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "클랜"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公会"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公會"
+          }
+        }
+      }
+    },
     "player.details.hitRate" : {
       "comment" : "Detailed statistic label.",
       "extractionState" : "manual",

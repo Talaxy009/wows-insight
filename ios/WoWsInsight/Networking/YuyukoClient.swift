@@ -106,7 +106,8 @@ struct YuyukoClient: Sendable {
             nickname: name,
             createdAt: user.accountCreateTime,
             lastBattleTime: data.lastBattleTime,
-            dogTagURL: user.dogTag.flatMap(URL.init(string:))
+            dogTagURL: user.dogTag.flatMap(URL.init(string:)),
+            clanName: user.clanInfo?.displayName
         )
 
         return AccountOverview(

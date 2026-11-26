@@ -26,6 +26,7 @@ class PlayerReportTest {
         createdAt = 1_723_289_938,
         lastBattleTime = 1_767_211_200,
         dogTagUrl = null,
+        clanName = null,
     )
 
     private val pvp = TestData.mode()

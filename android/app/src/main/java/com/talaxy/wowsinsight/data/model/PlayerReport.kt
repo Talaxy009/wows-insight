@@ -18,6 +18,8 @@ data class AccountInfo(
     val lastBattleTime: Int?,
     /** Absolute URL of the in-game dog tag image. */
     val dogTagUrl: String?,
+    /** "[TAG] Name" of the current clan, or `null` when the account is not in one. */
+    val clanName: String?,
 )
 
 /** The account overview returned by `account/user/info2`, split per mode. */

@@ -83,6 +83,9 @@ ios/
   每日记录例外：`recentDays` 不抛错，失败就当作「没有记录」，页面照常显示。
 - **玩家页头像**：昵称左侧显示 `userInfo.dogTag`。它是服务端给的 190×190 PNG 直链，
   没有该字段或取不到图时显示占位暗块，所以模型里存成 `AccountInfo.dogTagURL`。
+- **玩家页公会**：`AccountInfo.clanName` 由 `YuyukoClanInfo.displayName` 与 Android
+  一致地格式化成 `[TAG] Name`；没有公会时为 `nil`，头部卡片不显示该行。公会行复用
+  `PlayerCards.swift` 的 `InfoRow`，用 `lineLimit(2)` 容纳长名称。
 - **战斗类型切换**：`PlayerReport` 按 `BattleMode` 保存总览、评分和最高记录，战舰保存每艘舰的
   `[BattleMode: ModeStats]`。玩家页用菜单式 `BattleModePicker` 切换，未选中时回退到
   `defaultMode`（有随机战用随机战，否则用第一个有数据的类型）。

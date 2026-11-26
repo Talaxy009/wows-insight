@@ -85,6 +85,9 @@ android/
   `TopAppBar` + 返回箭头。
 - **玩家行**：搜索结果行（`PlayerRowCard`）和收藏行共用 `PlayerIdentity`（昵称 + 「服务器 · ID」）和
   `PlayerRowTrailing`（收藏星 + 箭头）；收藏的身份比较统一用 `FavoritePlayer.idOf(server, accountId)`。
+- **玩家页头部**：`AccountInfo.clanName` 由 `YuyukoClanInfo.displayName` 统一格式化成
+  `[TAG] Name`。没有公会时为 `null`，头部不显示公会行；有公会时用
+  `InfoRow(valueMaxLines = 2)`，长名称换行而不是把「公会」标签挤掉。
 - **玩家页列表**：战舰行是 `LazyColumn` 的独立 item（几百艘舰只组合屏幕内的行），圆角卡片效果由
   `stackedItemShape` 按首 / 尾行切角拼成；所以这个 `LazyColumn` 不用 `spacedBy`，各区块的间距是
   `sectionItem` 给的底部 padding。排序放在 `remember` 里，不要在 item 构建里排序。
@@ -150,7 +153,7 @@ cd android
 # Debug APK
 ./gradlew :app:assembleDebug
 
-# 单元测试（当前 40 个）
+# 单元测试（当前 42 个）
 ./gradlew :app:testDebugUnitTest
 
 # lint（有 error 会失败）

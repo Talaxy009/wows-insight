@@ -52,6 +52,10 @@ Yuyuko 公共接口、统计口径和收藏文件格式。平台自己的实现�
 `account/user/info2` 的 `battleTypeInfo[code].shipInfo` 和 `ship/info/list` 的
 `typeInfo[code].battleInfo` 是同一套 `BattleInfoData`，只是名字不同。
 
+`account/user/info2` 的 `userInfo.clanInfo` 是账号当前公会（`tag` / `name`）。无公会时
+`clanId == 0` 且两个字符串都为空；两端把它归一化成「没有公会」，玩家页不显示公会行。有公会时
+显示为 `[TAG] Name`，缺少其中一项时只显示存在的那一项。
+
 ### 战斗类型
 
 `account/user/info2` 的 `battleTypeInfo` 是以 API 代码为 key 的字典：`PVP` / `PVP_SOLO` /

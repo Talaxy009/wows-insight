@@ -134,6 +134,7 @@ internal fun YuyukoUserInfoData.toAccountOverview(
             createdAt = user.accountCreateTime,
             lastBattleTime = lastBattleTime,
             dogTagUrl = user.dogTag?.takeIf { it.isNotBlank() },
+            clanName = user.clanInfo?.displayName,
         ),
         modes = battleTypeInfo?.toModeStats().orEmpty(),
         shipTypes = shipTypeInfo?.toCategories { CategoryKey.ShipType(it) }.orEmpty(),
