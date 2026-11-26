@@ -9,7 +9,7 @@ import com.talaxy.wowsinsight.data.model.PlayerSummary
 import com.talaxy.wowsinsight.data.repository.PlayerRepository
 import com.talaxy.wowsinsight.ui.util.UiText
 import com.talaxy.wowsinsight.ui.util.toUiText
-import kotlinx.coroutines.CancellationException
+import com.talaxy.wowsinsight.util.runCatchingCancellable
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -106,13 +106,12 @@ class SearchViewModel(
         }
         emit(SearchOutcome.Searching)
         delay(DEBOUNCE_MILLIS)
-        try {
-            emit(SearchOutcome.Success(repository.searchPlayers(key.query, key.server)))
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (failure: Exception) {
-            emit(SearchOutcome.Failure(failure.toUiText()))
-        }
+        emit(
+            runCatchingCancellable { repository.searchPlayers(key.query, key.server) }.fold(
+                onSuccess = { SearchOutcome.Success(it) },
+                onFailure = { SearchOutcome.Failure(it.toUiText()) },
+            ),
+        )
     }
 
     /** One atomic write per outcome, so the UI never sees a half-updated list. */

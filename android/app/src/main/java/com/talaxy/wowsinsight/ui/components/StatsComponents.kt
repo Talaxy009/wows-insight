@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.talaxy.wowsinsight.R
 import com.talaxy.wowsinsight.data.model.BattleRecord
@@ -87,20 +88,8 @@ private fun StatsOverviewCard(stats: BattleStats) {
     )
 
     SectionCard(title = stringResource(R.string.player_stats_overview)) {
-        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            items.chunked(3).forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    row.forEach { item ->
-                        StatCell(item = item, modifier = Modifier.weight(1f))
-                    }
-                    repeat(3 - row.size) {
-                        Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
+        CellGrid(items = items, columns = 3, horizontalSpacing = 12.dp, verticalSpacing = 18.dp) { item, cell ->
+            StatCell(item = item, modifier = cell)
         }
     }
 }
@@ -202,18 +191,8 @@ private fun DetailedStatsCard(stats: BattleStats) {
     )
 
     SectionCard(title = stringResource(R.string.player_details_title)) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            items.chunked(2).forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    row.forEach { item ->
-                        DetailStat(item = item, modifier = Modifier.weight(1f))
-                    }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
+        CellGrid(items = items, columns = 2, horizontalSpacing = 16.dp, verticalSpacing = 14.dp) { item, cell ->
+            DetailStat(item = item, modifier = cell)
         }
     }
 }
@@ -252,17 +231,32 @@ private fun DetailStat(
 @Composable
 private fun RecordsCard(records: List<BattleRecord>) {
     SectionCard(title = stringResource(R.string.player_records_title)) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            records.chunked(2).forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    row.forEach { record ->
-                        RecordCell(record = record, modifier = Modifier.weight(1f))
-                    }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
-                }
+        CellGrid(items = records, columns = 2, horizontalSpacing = 16.dp, verticalSpacing = 14.dp) { record, cell ->
+            RecordCell(record = record, modifier = cell)
+        }
+    }
+}
+
+/**
+ * Rows of [columns] equally wide cells. The last row is padded with empty
+ * space so a short row keeps the same cell width as the full ones.
+ */
+@Composable
+private fun <T> CellGrid(
+    items: List<T>,
+    columns: Int,
+    horizontalSpacing: Dp,
+    verticalSpacing: Dp,
+    cell: @Composable (item: T, modifier: Modifier) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
+        items.chunked(columns).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+            ) {
+                row.forEach { item -> cell(item, Modifier.weight(1f)) }
+                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }

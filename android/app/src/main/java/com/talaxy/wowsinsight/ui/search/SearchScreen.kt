@@ -20,13 +20,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.FileDownload
@@ -65,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -83,12 +83,12 @@ import com.talaxy.wowsinsight.data.model.PlayerSummary
 import com.talaxy.wowsinsight.ui.components.EmptySearchState
 import com.talaxy.wowsinsight.ui.components.EmptyState
 import com.talaxy.wowsinsight.ui.components.ErrorState
-import com.talaxy.wowsinsight.ui.components.FavoriteStarButton
 import com.talaxy.wowsinsight.ui.components.ListHeader
 import com.talaxy.wowsinsight.ui.components.LoadingState
+import com.talaxy.wowsinsight.ui.components.PlayerIdentity
 import com.talaxy.wowsinsight.ui.components.PlayerRowCard
+import com.talaxy.wowsinsight.ui.components.PlayerRowTrailing
 import com.talaxy.wowsinsight.ui.components.SelectedMenuItem
-import com.talaxy.wowsinsight.ui.components.serverAccountLabel
 import com.talaxy.wowsinsight.ui.util.UiText
 import com.talaxy.wowsinsight.ui.util.labelRes
 import com.talaxy.wowsinsight.ui.util.resolve
@@ -289,10 +289,8 @@ private fun SearchResults(
     onToggleFavorite: (PlayerSummary) -> Unit,
 ) {
     val favoriteIds = remember(favorites) { favorites.map { it.id }.toSet() }
-    val listState = rememberLazyListState()
 
     LazyColumn(
-        state = listState,
         contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -302,11 +300,11 @@ private fun SearchResults(
                 count = results.size,
             )
         }
-        itemsIndexed(results, key = { _, player -> player.accountId }) { _, player ->
+        items(results, key = { it.accountId }) { player ->
             PlayerRowCard(
                 player = player,
                 server = server,
-                isFavorite = favoriteIds.contains("${server.apiValue}-${player.accountId}"),
+                isFavorite = FavoritePlayer.idOf(server, player.accountId) in favoriteIds,
                 onClick = { onOpen(player) },
                 onToggleFavorite = { onToggleFavorite(player) },
             )
@@ -331,11 +329,9 @@ private fun FavoritesList(
         return
     }
 
-    val listState = rememberLazyListState()
     var draggingId by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
-        state = listState,
         contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -382,7 +378,7 @@ private fun FavoriteRow(
     val moveUpLabel = stringResource(R.string.search_favorites_move_up)
     val moveDownLabel = stringResource(R.string.search_favorites_move_down)
     val reorderLabel = stringResource(R.string.search_favorites_reorder)
-    val density = androidx.compose.ui.platform.LocalDensity.current
+    val density = LocalDensity.current
     val threshold = with(density) { 48.dp.toPx() }
 
     val latestIndex by rememberUpdatedState(index)
@@ -460,40 +456,16 @@ private fun FavoriteRow(
                 )
             }
 
-            Column(
+            PlayerIdentity(
+                nickname = favorite.nickname,
+                server = favorite.server,
+                accountId = favorite.accountId,
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = onOpen)
                     .padding(vertical = 10.dp, horizontal = 4.dp),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = favorite.nickname,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = serverAccountLabel(favorite.server, favorite.accountId),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            FavoriteStarButton(
-                selected = true,
-                addLabel = stringResource(R.string.search_favorite_add),
-                removeLabel = stringResource(R.string.search_favorite_remove),
-                onClick = onRemove,
             )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.width(8.dp))
+            PlayerRowTrailing(isFavorite = true, onToggleFavorite = onRemove)
         }
     }
 }

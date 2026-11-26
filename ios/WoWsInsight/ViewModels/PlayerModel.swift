@@ -12,7 +12,6 @@ final class PlayerModel {
     private(set) var errorMessage: String?
 
     private let client: YuyukoClient
-    private var hasLoaded = false
 
     init(
         account: PlayerSummary,
@@ -25,7 +24,7 @@ final class PlayerModel {
     }
 
     func loadIfNeeded() async {
-        guard !hasLoaded else { return }
+        guard report == nil else { return }
         await load()
     }
 
@@ -59,7 +58,6 @@ final class PlayerModel {
                 shipStats: shipStats,
                 dailyStats: daily
             )
-            hasLoaded = true
         } catch {
             guard !error.isCancellation else { return }
             errorMessage = error.localizedDescription

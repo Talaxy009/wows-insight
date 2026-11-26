@@ -275,10 +275,7 @@ jobs:
           cat > "${notes_file}" <<'EOF'
           ### 安装
 
-          本 Release 同时提供 iOS 和 Android 两个客户端：
-
-          - **iOS**：`WoWsInsight-<版本>.ipa` 未签名，用自己的证书通过 AltStore / Sideloadly / Xcode 重签。
-            重签时描述文件的 App ID 必须等于 `PRODUCT_BUNDLE_IDENTIFIER`。
+          - **iOS**：`WoWsInsight-<版本>.ipa` 未签名，自行通过 AltStore / Sideloadly / Xcode 重签。重签时描述文件的 App ID 需等于 `PRODUCT_BUNDLE_IDENTIFIER`。
           - **Android**：`WoWsInsight-<版本>.apk` 已签名，可直接安装。系统要求 Android 8.0（API 26）及以上。
           EOF
 

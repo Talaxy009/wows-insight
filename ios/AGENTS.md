@@ -162,33 +162,9 @@ ios/
 
 ## 多语言与新增语言
 
-界面语言由 iOS 根据系统语言自动选择，代码中没有任何语言切换开关（舰名规则见根
-[AGENTS.md](../AGENTS.md#多语言)）：
-
-- 系统为简体中文 → 界面中文，战舰名称为 `nameCn`
-- 系统为繁体中文 → 界面繁体中文，战舰名称同样用 `nameCn`
-- 系统为英文 → 界面英文，战舰名称为 `nameEnglish`
-- 系统为日语 / 韩语 → 界面日语 / 韩语，战舰名称回退为 `nameEnglish`
-- 其他系统语言 → 由 iOS 回退到英文或中文，战舰名称与回退后的界面保持一致
-- 国服（`cn`）优先用 360 的译名 `nameCn360`
-
-### 新增一种语言
-
-1. 在 `Localizable.xcstrings` 中添加语言（例如 `de`），翻译全部 key。每个 key 都有注释说明
-   使用场景；格式字符串中的 `%1$@`、`%2$@` 等占位符不要删除或调序。
-2. 在 `InfoPlist.xcstrings` 中添加同一语言的 `CFBundleDisplayName`（桌面显示名称）。
-3. 在 `WoWsInsight.xcodeproj/project.pbxproj` 的 `knownRegions` 里加上该语言码。
-4. 如果新语言需要自己的舰名（接口目前只提供中 / 英 / 俄三种），在 `ShipNameLanguage` 和
-   `YuyukoShipMeta.name(language:server:)` 中扩展。
-5. 用 Xcode 打开工程时如果新语言没有出现在 Project → Info → Localizations 中，把它加进去。
-6. 在仓库根目录运行 `python .agents/skills/wows-localization/scripts/generate_strings.py`，让
-   Android 资源跟上（见
-   [`wows-localization`](../.agents/skills/wows-localization/SKILL.md)）。
-
-因为所有文案都走 `L10n.swift` + String Catalog，人工翻译或让 AI 翻译都只需要处理这两个
-`.xcstrings` 文件，不需要改 View 代码。新增用户可见文案时：先在 `L10n.swift` 加 key，
-**同时**在 `Localizable.xcstrings` 补上 en 和其余全部语言（目前是 en / ja / ko / zh-Hans /
-zh-Hant）——代码里没有英文兜底，漏掉 key 的界面会直接显示原始 key。
+文案全部在 `Localizable.xcstrings`，代码通过 `L10n.swift` 的语义化 key 引用，没有英文兜底（漏 key
+会直接显示 key）。舰名规则见根 [AGENTS.md](../AGENTS.md#多语言)；新增文案 / 语言的步骤见
+[`wows-localization`](../.agents/skills/wows-localization/SKILL.md)。
 
 ## 构建与验证
 
@@ -264,33 +240,13 @@ codesign -d --entitlements :- /tmp/wows-device/Build/Products/Debug-iphoneos/WoW
 
 ## 发布
 
-iOS 和 Android 由同一个[发布工作流](../.github/workflows/release.yml)手动触发，iOS 侧细节：
+- CI 跑在 `xcode-27` 镜像（iOS 27 SDK），**不要退回旧镜像**：旧 SDK 构建的包在 iOS 26+ 上会走
+  兼容外观（`xcode-27` 目前是 preview 标签，GA 后换成 `macos-27`）。
+- 版本号不要写进 `project.pbxproj`，也不要在 Xcode 的 General 页改 Version：target 的 base
+  configuration 是根目录的 [`version.xcconfig`](../version.xcconfig)，改了会盖掉共享文件。
+- IPA 不签名。**重签名必须让描述文件的 App ID 等于 `PRODUCT_BUNDLE_IDENTIFIER`**：重签工具会用
+  描述文件里的 entitlements 覆盖整个 App，用别的 App ID 签出来的包能启动，但 `.fileImporter`
+  拿不到可读 URL（「选了文件没反应」）。检查：`codesign -d --entitlements :- Payload/WoWsInsight.app`
+  里 `application-identifier` 的后缀要等于 `CFBundleIdentifier`。
 
-- 跑在 `xcode-27` 镜像上，用 Xcode 27 / iOS 27 SDK 构建。**不要退回旧镜像**：用 iOS 18 SDK
-  构建的包在 iOS 26+ 上会走兼容外观，界面和本地用 Xcode 27 构建的不一致（`xcode-27`
-  目前是 preview 标签，GA 后换成 `macos-27`）。
-- 版本号不要写进 `project.pbxproj`：target 的 base configuration 是仓库根目录的
-  [`version.xcconfig`](../version.xcconfig)，它把 `VERSION_NAME` / `VERSION_CODE` 映射成
-  `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`。也不要在 Xcode 的 General 页改 Version，
-  否则会把值写回 `project.pbxproj` 盖掉共享文件。
-- `version` 输入就是发布版本号（可带 `v` 前缀），例如 `1.0.1` → 标签 `v1.0.1`；
-  同时用 `MARKETING_VERSION=1.0.1` 覆盖 `version.xcconfig` 里的值，`CURRENT_PROJECT_VERSION`
-  用 run number。
-- `version` 留空时用 `version.xcconfig` 的 `VERSION_NAME`；标签已存在会直接报错，需要换一个版本号。
-- 产物是 `WoWsInsight-<version>.ipa`（`Payload/WoWsInsight.app`），同时上传成 Actions artifact；
-  IPA **不签名**（`CODE_SIGNING_ALLOWED=NO`），使用者需要自己用 AltStore / Sideloadly / Xcode 重签。
-
-> **重签名必须让描述文件的 App ID 等于 `PRODUCT_BUNDLE_IDENTIFIER`。** 重签工具会用描述文件里的
-> `Entitlements` 覆盖整个 App（CI 产物本身一个 entitlement 都没有），而 `application-identifier`
-> 必须是 `<TeamID>.<BundleID>`。用别的 App ID 的 profile 签出来的 App 能启动、界面正常，但
-> 文档选择器发出的沙盒扩展落不到 App 上——`.fileImporter` 会拿不到可读的 URL（表现为「选了文件
-> 没反应」），iCloud Drive 的文件也会卡在同步。检查方法：`codesign -d --entitlements :- Payload/WoWsInsight.app`
-> 里 `application-identifier` 的后缀要等于 `CFBundleIdentifier`。
-
-> 仓库需要在 Settings → Actions → General → Workflow permissions 里允许
-> **Read and write permissions**，否则 `gh release create` 会因 `GITHUB_TOKEN` 没有写权限而失败。
-
-## 后续可扩展方向
-
-- 收藏分组、按名称 / 评分自动排序
-- 排位赛季与成就
+完整流程见 [`wows-release`](../.agents/skills/wows-release/SKILL.md)。

@@ -4,7 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -77,16 +79,9 @@ fun WoWsInsightApp(container: AppContainer) {
         }
 
         composable<PlayerRoute> { entry ->
-            val route = entry.toRoute<PlayerRoute>()
-            val server = GameServer.fromApi(route.server) ?: GameServer.ASIA
-            val playerViewModel: PlayerViewModel = viewModel(
-                key = PLAYER_VIEW_MODEL_KEY,
-                factory = PlayerViewModel.factory(
-                    account = PlayerSummary(route.accountId, route.nickname),
-                    server = server,
-                    repository = container.playerRepository,
-                    favoritesRepository = container.favoritesRepository,
-                ),
+            val playerViewModel = playerViewModel(
+                route = entry.toRoute<PlayerRoute>(),
+                container = container,
             )
             val uiState by playerViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -116,17 +111,10 @@ fun WoWsInsightApp(container: AppContainer) {
             val parentEntry = remember(entry) {
                 navController.getBackStackEntry<PlayerRoute>()
             }
-            val parentRoute = parentEntry.toRoute<PlayerRoute>()
-            val server = GameServer.fromApi(parentRoute.server) ?: GameServer.ASIA
-            val playerViewModel: PlayerViewModel = viewModel(
-                viewModelStoreOwner = parentEntry,
-                key = PLAYER_VIEW_MODEL_KEY,
-                factory = PlayerViewModel.factory(
-                    account = PlayerSummary(parentRoute.accountId, parentRoute.nickname),
-                    server = server,
-                    repository = container.playerRepository,
-                    favoritesRepository = container.favoritesRepository,
-                ),
+            val playerViewModel = playerViewModel(
+                route = parentEntry.toRoute<PlayerRoute>(),
+                container = container,
+                owner = parentEntry,
             )
             val uiState by playerViewModel.uiState.collectAsStateWithLifecycle()
             val mode = BattleMode.fromApi(route.mode) ?: BattleMode.PVP
@@ -149,3 +137,23 @@ fun WoWsInsightApp(container: AppContainer) {
         }
     }
 }
+
+/**
+ * The player page and the ship page share one [PlayerViewModel], owned by the
+ * player's back stack entry, so opening a ship does not reload the report.
+ */
+@Composable
+private fun playerViewModel(
+    route: PlayerRoute,
+    container: AppContainer,
+    owner: ViewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current),
+): PlayerViewModel = viewModel(
+    viewModelStoreOwner = owner,
+    key = PLAYER_VIEW_MODEL_KEY,
+    factory = PlayerViewModel.factory(
+        account = PlayerSummary(route.accountId, route.nickname),
+        server = GameServer.fromApi(route.server) ?: GameServer.ASIA,
+        repository = container.playerRepository,
+        favoritesRepository = container.favoritesRepository,
+    ),
+)

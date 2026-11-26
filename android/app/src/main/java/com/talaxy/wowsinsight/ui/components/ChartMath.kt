@@ -12,6 +12,7 @@ import kotlin.math.pow
 
 /** Pure chart maths, separated from Compose so it can be unit tested. */
 object ChartMath {
+    private const val MAX_TICKS = 12
 
     /**
      * Room above and below the line so a flat series does not sit on the axis
@@ -50,14 +51,7 @@ object ChartMath {
             normalized <= 5.0 -> 5.0
             else -> 10.0
         }
-        val step = niceNormalized * magnitude
-        var value = (ceil(lower / step) * step).withoutNegativeZero()
-        val ticks = mutableListOf<Double>()
-        while (value <= upper + step * 0.001 && ticks.size < 12) {
-            ticks += value
-            value += step
-        }
-        return if (ticks.isEmpty()) listOf(lower) else ticks
+        return ticksBetween(lower, upper, niceNormalized * magnitude).ifEmpty { listOf(lower) }
     }
 
     /** Percentage ticks at a readable 5 / 10 / 25 point step. */
@@ -68,9 +62,14 @@ object ChartMath {
             span <= 60.0 -> 10.0
             else -> 25.0
         }
-        var value = (ceil(lower / step) * step).withoutNegativeZero()
+        return ticksBetween(lower, upper, step)
+    }
+
+    /** Multiples of [step] inside [lower]..[upper], never more than a dozen. */
+    private fun ticksBetween(lower: Double, upper: Double, step: Double): List<Double> {
         val ticks = mutableListOf<Double>()
-        while (value <= upper + 0.001 && ticks.size < 12) {
+        var value = (ceil(lower / step) * step).withoutNegativeZero()
+        while (value <= upper + step * 0.001 && ticks.size < MAX_TICKS) {
             ticks += value
             value += step
         }

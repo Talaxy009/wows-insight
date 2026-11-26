@@ -13,6 +13,7 @@ import com.talaxy.wowsinsight.data.model.ShipSort
 import com.talaxy.wowsinsight.data.model.ShipStat
 import com.talaxy.wowsinsight.data.model.ranked
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -88,6 +89,31 @@ class PlayerReportTest {
         assertEquals(1, report.dailyStats(BattleMode.PVP).size)
         assertEquals(1, report.dailyStats(BattleMode.RANKED).size)
         assertTrue(report.dailyStats(BattleMode.CLAN).isEmpty())
+    }
+
+    @Test
+    fun trendOnlyCountsDaysInsideTheSevenDayAxis() {
+        fun reportWith(vararg days: LocalDate) = PlayerReport.create(
+            overview = AccountOverview(
+                account = account,
+                modes = mapOf(BattleMode.PVP to pvp),
+                shipTypes = emptyList(),
+                tiers = emptyList(),
+            ),
+            shipStats = emptyList(),
+            dailyStats = days.mapIndexed { index, day ->
+                DailyStats(index.toLong(), day, mapOf(BattleMode.PVP to pvp))
+            },
+        )
+
+        // 11/11 is older than the axis that ends on 11/19, so only two days remain.
+        val stale = reportWith(LocalDate.of(2026, 11, 11), LocalDate.of(2026, 11, 15), LocalDate.of(2026, 11, 19))
+        assertEquals(2, stale.trendDays(BattleMode.PVP).size)
+        assertTrue(stale.hasTrend(BattleMode.PVP))
+
+        val lone = reportWith(LocalDate.of(2026, 11, 11), LocalDate.of(2026, 11, 19))
+        assertEquals(1, lone.trendDays(BattleMode.PVP).size)
+        assertFalse(lone.hasTrend(BattleMode.PVP))
     }
 
     @Test

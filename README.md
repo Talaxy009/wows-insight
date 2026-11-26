@@ -49,28 +49,9 @@
   （首页「⋯」菜单最后一项）
 - 多语言：简体中文 / 繁體中文 / English / 日本語 / 한국어
 
-## 仓库结构
+## 开发
 
-```txt
-.
-├── ios/                          # 原生 iOS 客户端（Swift / SwiftUI）
-│   ├── README.md
-│   ├── AGENTS.md
-│   ├── WoWsInsight.xcodeproj
-│   └── WoWsInsight/
-├── android/                      # 原生 Android 客户端（Kotlin / Compose）
-│   ├── README.md
-│   ├── AGENTS.md
-│   └── app/
-├── docs/
-│   └── icon.svg                  # 两个平台共用的应用图标源文件
-├── .agents/skills/               # 可复用流程：多语言、应用图标、收藏、发布、接口
-├── .github/workflows/            # 手动触发的发布流水线（IPA + APK）
-├── README.md                     # 本文件：仓库总览与共用说明
-└── AGENTS.md                     # 面向开发者的仓库级说明
-```
-
-平台各自的运行、构建和发布细节见对应目录的 README；仓库级开发说明见 [AGENTS.md](./AGENTS.md)。
+平台各自的运行与构建见对应目录的 README；仓库级开发说明（接口口径、收藏格式、发布流程）见 [AGENTS.md](./AGENTS.md)。
 
 ## 个人评分怎么看
 
@@ -97,10 +78,11 @@
 - 只支持玩家昵称搜索，不支持按账号 ID 直接搜索；国服（360）只支持完整昵称精确匹配。
 - 隐藏战绩的账号只能显示昵称和注册 / 最后战斗时间。
 - 未查询过的玩家首次打开需要 6–8 秒（服务端要回源拉取数据），之后同一玩家会快很多。
+- 服务端只对观察过的账号保留每日记录；少于两天数据时不显示趋势图。
 - Yuyuko 是社区服务，没有 SLA；接口异常时页面会提示重试。
 
 ## 声明
 
-本工程与 Wargaming、wows-numbers、Yuyuko 均没有官方关系。
+本项目与 Wargaming、wows-numbers、Yuyuko 均没有官方关系。
 
 数据由第三方服务 [Yuyuko](https://wows.shinoaki.com/) 提供。

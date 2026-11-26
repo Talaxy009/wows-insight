@@ -15,7 +15,7 @@ import com.talaxy.wowsinsight.data.model.ShipSort
 import com.talaxy.wowsinsight.data.repository.PlayerRepository
 import com.talaxy.wowsinsight.ui.util.UiText
 import com.talaxy.wowsinsight.ui.util.toUiText
-import kotlinx.coroutines.CancellationException
+import com.talaxy.wowsinsight.util.runCatchingCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,16 +70,14 @@ class PlayerViewModel(
     val uiState = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
-    private var hasLoaded = false
 
     fun loadIfNeeded() {
-        if (hasLoaded || loadJob?.isActive == true) return
-        load()
+        if (_uiState.value.report == null) load()
     }
 
     /** Reloads even when a report is already on screen (pull to refresh, retry). */
     fun refresh() {
-        load(force = true)
+        load()
     }
 
     fun dismissError() {
@@ -103,10 +101,9 @@ class PlayerViewModel(
         _uiState.update { it.copy(chartBreakdown = breakdown) }
     }
 
-    private fun load(force: Boolean = false) {
+    private fun load() {
         if (loadJob?.isActive == true) return
         val current = _uiState.value
-        if (!force && hasLoaded && current.report != null) return
 
         val hasReport = current.report != null
         _uiState.update {
@@ -118,41 +115,35 @@ class PlayerViewModel(
         }
 
         loadJob = viewModelScope.launch {
-            try {
-                val report = repository.loadReport(current.accountId, current.server)
-                hasLoaded = true
-                _uiState.update {
-                    it.copy(
-                        report = report,
-                        isLoading = false,
-                        isRefreshing = false,
-                        error = null,
-                    )
+            runCatchingCancellable { repository.loadReport(current.accountId, current.server) }
+                .onSuccess { report ->
+                    _uiState.update {
+                        it.copy(
+                            report = report,
+                            isLoading = false,
+                            isRefreshing = false,
+                            error = null,
+                        )
+                    }
+                    // The API nickname is authoritative; keep favorites in sync.
+                    // A storage failure must not turn a successful report into
+                    // an error screen.
+                    runCatchingCancellable {
+                        favoritesRepository.updateNickname(
+                            PlayerSummary(report.account.accountId, report.account.nickname),
+                            current.server,
+                        )
+                    }
                 }
-                // The API nickname is authoritative; keep favorites in sync.
-                // A storage failure must not turn a successful report into an
-                // error screen.
-                try {
-                    favoritesRepository.updateNickname(
-                        PlayerSummary(report.account.accountId, report.account.nickname),
-                        current.server,
-                    )
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    // Best effort only.
+                .onFailure { failure ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            error = failure.toUiText(),
+                        )
+                    }
                 }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (failure: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isRefreshing = false,
-                        error = failure.toUiText(),
-                    )
-                }
-            }
         }
     }
 

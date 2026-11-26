@@ -38,28 +38,20 @@ fun PlayerChartsSection(
     onMetricChange: (ChartMetric) -> Unit,
     onBreakdownChange: (ChartBreakdown) -> Unit,
 ) {
-    val days = report.dailyStats(mode)
-    val shipTypeCategories = report.categories(ChartBreakdown.SHIP_TYPE, mode)
-    val tierCategories = report.categories(ChartBreakdown.TIER, mode)
-    val hasTrend = days.size > 1
-    val hasBreakdown = shipTypeCategories.isNotEmpty() || tierCategories.isNotEmpty()
-
-    if (!hasTrend && !hasBreakdown) return
-
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (hasTrend) {
+        if (report.hasTrend(mode)) {
             TrendCard(
-                days = days,
+                days = report.trendDays(mode),
                 window = report.dailyStats,
                 mode = mode,
                 metric = metric,
                 onMetricChange = onMetricChange,
             )
         }
-        if (hasBreakdown) {
+        if (report.hasBreakdown(mode)) {
             BreakdownCard(
-                shipTypeCategories = shipTypeCategories,
-                tierCategories = tierCategories,
+                shipTypeCategories = report.categories(ChartBreakdown.SHIP_TYPE, mode),
+                tierCategories = report.categories(ChartBreakdown.TIER, mode),
                 mode = mode,
                 breakdown = breakdown,
                 onBreakdownChange = onBreakdownChange,

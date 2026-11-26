@@ -75,7 +75,6 @@ struct YuyukoShipMeta: Decodable, Sendable {
     let nameCn: String?
     let nameCn360: String?
     let nameEnglish: String?
-    let nameRu: String?
     let level: Int?
     let shipType: String?
     let country: String?

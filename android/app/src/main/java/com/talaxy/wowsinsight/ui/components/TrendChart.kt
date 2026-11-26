@@ -27,6 +27,7 @@ import com.talaxy.wowsinsight.data.model.BattleMode
 import com.talaxy.wowsinsight.data.model.ChartMetric
 import com.talaxy.wowsinsight.data.model.DailyStats
 import com.talaxy.wowsinsight.data.model.ModeStats
+import com.talaxy.wowsinsight.data.model.PlayerReport
 import com.talaxy.wowsinsight.data.model.RatingTier
 import com.talaxy.wowsinsight.ui.theme.ratingColor
 import com.talaxy.wowsinsight.ui.util.StatFormat
@@ -40,9 +41,6 @@ private data class TrendPoint(
     val day: LocalDate,
     val stats: ModeStats,
 )
-
-/** The service keeps the last week, so the axis always spans seven days. */
-private const val AXIS_DAYS = 7L
 
 /** One tick every other day: days 1, 3, 5 and 7 of the axis. */
 private const val AXIS_TICK_STEP = 2L
@@ -66,7 +64,7 @@ fun TrendChart(
     // The axis ends on the newest recorded day even when it has no battles, so
     // a gap at the right edge does not move the ticks.
     val axisEnd = (window.lastOrNull() ?: days.lastOrNull())?.day ?: return
-    val axisStart = axisEnd.minusDays(AXIS_DAYS - 1)
+    val axisStart = axisEnd.minusDays(PlayerReport.TREND_AXIS_DAYS - 1)
     val points = days.mapNotNull { day ->
         day.modes[mode]?.let { TrendPoint(day.day, it) }
     }.filter { !it.day.isBefore(axisStart) }
@@ -153,7 +151,7 @@ fun TrendChart(
         }
 
         // X-axis labels on days 1, 3, 5 and 7 of the axis.
-        (0L until AXIS_DAYS step AXIS_TICK_STEP).forEach { offset ->
+        (0L until PlayerReport.TREND_AXIS_DAYS step AXIS_TICK_STEP).forEach { offset ->
             val day = axisStart.plusDays(offset)
             val layout = textMeasurer.measure(
                 AnnotatedString(StatFormat.chartDay(day)),

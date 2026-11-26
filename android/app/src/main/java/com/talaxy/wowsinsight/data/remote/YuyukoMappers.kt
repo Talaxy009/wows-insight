@@ -30,23 +30,18 @@ internal fun YuyukoStatsBlock.toBattleStats(): BattleStats {
     val totals = battleInfo
     val best = maxInfo
 
-    fun add(
-        kind: BattleRecordKind,
-        entry: YuyukoMaxValue?,
-        into: MutableMap<BattleRecordKind, BattleRecordValue>,
-    ) {
-        val value = entry?.value ?: return
-        into[kind] = BattleRecordValue(value = value, shipId = entry.shipId)
-    }
-
     val records = buildMap {
-        add(BattleRecordKind.MAX_DAMAGE, best?.maxDamageDealt, this)
-        add(BattleRecordKind.MAX_FRAGS, best?.maxFrags, this)
-        add(BattleRecordKind.MAX_XP, best?.maxXp, this)
-        add(BattleRecordKind.MAX_PLANES, best?.maxPlanesKilled, this)
-        add(BattleRecordKind.MAX_SPOTTED, best?.maxShipsSpotted, this)
-        add(BattleRecordKind.MAX_AGRO, best?.maxTotalAgro, this)
-        add(BattleRecordKind.MAX_SCOUTING, best?.maxScoutingDamage, this)
+        fun add(kind: BattleRecordKind, entry: YuyukoMaxValue?) {
+            val value = entry?.value ?: return
+            put(kind, BattleRecordValue(value = value, shipId = entry.shipId))
+        }
+        add(BattleRecordKind.MAX_DAMAGE, best?.maxDamageDealt)
+        add(BattleRecordKind.MAX_FRAGS, best?.maxFrags)
+        add(BattleRecordKind.MAX_XP, best?.maxXp)
+        add(BattleRecordKind.MAX_PLANES, best?.maxPlanesKilled)
+        add(BattleRecordKind.MAX_SPOTTED, best?.maxShipsSpotted)
+        add(BattleRecordKind.MAX_AGRO, best?.maxTotalAgro)
+        add(BattleRecordKind.MAX_SCOUTING, best?.maxScoutingDamage)
     }
 
     return BattleStats(

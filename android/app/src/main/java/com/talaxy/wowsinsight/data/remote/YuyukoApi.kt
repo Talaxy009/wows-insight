@@ -6,7 +6,7 @@ import com.talaxy.wowsinsight.data.model.GameServer
 import com.talaxy.wowsinsight.data.model.PlayerSummary
 import com.talaxy.wowsinsight.data.model.ShipNameLanguage
 import com.talaxy.wowsinsight.data.model.ShipStat
-import kotlinx.coroutines.CancellationException
+import com.talaxy.wowsinsight.util.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -27,7 +27,6 @@ import kotlin.coroutines.resume
 
 /** A user-facing failure of the Yuyuko API. */
 sealed class ApiException(message: String? = null) : Exception(message) {
-    data object InvalidUrl : ApiException("Invalid request URL")
     data class Http(val code: Int) : ApiException("HTTP $code")
     data object NotFound : ApiException("Not found")
     data class Api(val code: Int, val serverMessage: String?) : ApiException(serverMessage)
@@ -36,7 +35,7 @@ sealed class ApiException(message: String? = null) : Exception(message) {
     data class Network(val detail: String?) : ApiException(detail)
 }
 
-/** The signed public API surface the screens depend on. */
+/** The public API surface the screens depend on. */
 interface YuyukoApi {
     suspend fun searchPlayers(query: String, server: GameServer): List<PlayerSummary>
     suspend fun accountOverview(accountId: Long, server: GameServer): AccountOverview
@@ -98,19 +97,15 @@ class DefaultYuyukoApi(
         accountId: Long,
         server: GameServer,
     ): List<DailyStats> {
-        val data: YuyukoRecentDaysData = try {
+        // The service answers 412 until it has a record for the account. Every
+        // failure means "no trend to draw"; the player page still loads without
+        // the chart.
+        val data: YuyukoRecentDaysData = runCatchingCancellable<YuyukoRecentDaysData> {
             get(
                 path = "public/wows/account/day/list/info",
                 query = accountQuery(accountId, server),
             )
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Exception) {
-            // The service answers 412 until it has a record for the account.
-            // Every failure means "no trend to draw"; the player page still
-            // loads without the chart.
-            return emptyList()
-        }
+        }.getOrElse { return emptyList() }
 
         return data.recentInfo.orEmpty()
             .mapNotNull { it.toDailyStats(zoneId) }
@@ -165,30 +160,20 @@ class DefaultYuyukoApi(
 
     private suspend inline fun <reified T> request(httpRequest: Request): T = withContext(Dispatchers.IO) {
         val response = execute(httpRequest)
+        if (response.status == 404 || response.status == 405) throw ApiException.NotFound
+
+        val isSuccessful = response.status in 200..299
         val envelope = try {
             json.decodeFromString<YuyukoEnvelope<T>>(response.body)
         } catch (failure: Exception) {
-            if (response.status in 200..299) {
-                throw ApiException.Decoding(
-                    "${failure.message}: ${response.body.take(300)}",
-                )
-            }
-            null
+            if (!isSuccessful) throw ApiException.Http(response.status)
+            throw ApiException.Decoding("${failure.message}: ${response.body.take(300)}")
         }
 
-        if (response.status == 404 || response.status == 405) throw ApiException.NotFound
-        if (envelope == null) {
-            if (response.status in 200..299) {
-                throw ApiException.Decoding("Unexpected response body")
-            }
-            throw ApiException.Http(response.status)
-        }
         if (envelope.code == 404 || envelope.code == 405) throw ApiException.NotFound
-        if (envelope.code != 200) {
-            throw ApiException.Api(envelope.code, envelope.message)
-        }
-        if (response.status !in 200..299) throw ApiException.Http(response.status)
-        return@withContext envelope.data ?: throw ApiException.MissingData
+        if (envelope.code != 200) throw ApiException.Api(envelope.code, envelope.message)
+        if (!isSuccessful) throw ApiException.Http(response.status)
+        envelope.data ?: throw ApiException.MissingData
     }
 
     private suspend fun execute(request: Request): HttpResponse =

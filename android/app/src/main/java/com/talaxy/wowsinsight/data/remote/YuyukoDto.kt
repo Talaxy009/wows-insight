@@ -78,7 +78,6 @@ data class YuyukoShipMeta(
     val nameCn: String? = null,
     val nameCn360: String? = null,
     val nameEnglish: String? = null,
-    val nameRu: String? = null,
     val level: Int? = null,
     val shipType: String? = null,
     val country: String? = null,

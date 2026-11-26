@@ -31,7 +31,6 @@ fun UiText.resolve(context: Context): String = when (this) {
 
 /** Maps an [ApiException] (or anything else) to copy the UI can show. */
 fun Throwable.toUiText(): UiText = when (this) {
-    is ApiException.InvalidUrl -> UiText.Res(R.string.error_invalid_url)
     is ApiException.Http -> UiText.Res(R.string.error_http_status, listOf(code.toString()))
     is ApiException.NotFound -> UiText.Res(R.string.error_not_found)
     is ApiException.Api -> if (!serverMessage.isNullOrBlank()) {

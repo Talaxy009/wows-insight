@@ -12,7 +12,7 @@ import com.talaxy.wowsinsight.data.model.FavoritePlayer
 import com.talaxy.wowsinsight.data.model.GameServer
 import com.talaxy.wowsinsight.data.model.PlayerSummary
 import com.talaxy.wowsinsight.ui.util.UiText
-import kotlinx.coroutines.CancellationException
+import com.talaxy.wowsinsight.util.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -58,57 +58,41 @@ class FavoritesViewModel(
 
     fun import(uri: Uri) {
         viewModelScope.launch {
-            try {
-                val players = withContext(Dispatchers.IO) {
-                    fileService.import(uri).getOrThrow()
-                }
-                val summary = repository.importArchive(players)
-                _messages.emit(
+            val message = runCatchingCancellable {
+                val players = withContext(Dispatchers.IO) { fileService.import(uri).getOrThrow() }
+                repository.importArchive(players)
+            }.fold(
+                onSuccess = { summary ->
                     UiText.Res(
                         R.string.search_import_summary,
                         listOf(summary.added, summary.skipped),
-                    ),
-                )
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                _messages.emit(UiText.Res(R.string.search_import_failed_message))
-            }
+                    )
+                },
+                onFailure = { UiText.Res(R.string.search_import_failed_message) },
+            )
+            _messages.emit(message)
         }
     }
 
     fun export(uri: Uri) {
         viewModelScope.launch {
-            try {
+            val result = runCatchingCancellable {
                 val players = repository.snapshot()
-                val result = withContext(Dispatchers.IO) { fileService.export(uri, players) }
-                _messages.emit(
-                    UiText.Res(
-                        if (result.isSuccess) {
-                            R.string.search_export_done
-                        } else {
-                            R.string.search_export_failed
-                        },
-                    ),
-                )
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                _messages.emit(UiText.Res(R.string.search_export_failed))
+                withContext(Dispatchers.IO) { fileService.export(uri, players).getOrThrow() }
             }
+            _messages.emit(
+                UiText.Res(
+                    if (result.isSuccess) R.string.search_export_done else R.string.search_export_failed,
+                ),
+            )
         }
     }
 
     /** Runs a storage write and reports a failure without crashing the app. */
     private fun persist(block: suspend () -> Unit) {
         viewModelScope.launch {
-            try {
-                block()
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                _messages.emit(UiText.Res(R.string.favorites_save_failed))
-            }
+            runCatchingCancellable { block() }
+                .onFailure { _messages.emit(UiText.Res(R.string.favorites_save_failed)) }
         }
     }
 

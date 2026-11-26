@@ -14,10 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.SwapVert
@@ -37,8 +38,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
@@ -73,6 +74,7 @@ import com.talaxy.wowsinsight.data.model.PlayerSummary
 import com.talaxy.wowsinsight.data.model.ShipPerformance
 import com.talaxy.wowsinsight.data.model.ShipSort
 import com.talaxy.wowsinsight.data.model.ranked
+import com.talaxy.wowsinsight.ui.components.BackTopAppBar
 import com.talaxy.wowsinsight.ui.components.EndAlignedDropdownMenu
 import com.talaxy.wowsinsight.ui.components.ErrorState
 import com.talaxy.wowsinsight.ui.components.FavoriteStarButton
@@ -115,9 +117,8 @@ fun PlayerScreen(
     val error = uiState.error
     val errorText = if (error != null) error.resolve() else null
     val player = uiState.currentPlayer
-    val isFavorite = favorites.any {
-        it.accountId == player.accountId && it.server == uiState.server
-    }
+    val favoriteId = FavoritePlayer.idOf(uiState.server, player.accountId)
+    val isFavorite = favorites.any { it.id == favoriteId }
     var showRatingInfo by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { onLoadIfNeeded() }
@@ -137,22 +138,9 @@ fun PlayerScreen(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = uiState.report?.account?.nickname ?: uiState.nickname,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back),
-                        )
-                    }
-                },
+            BackTopAppBar(
+                title = uiState.report?.account?.nickname ?: uiState.nickname,
+                onBack = onBack,
                 actions = {
                     FavoriteStarButton(
                         selected = isFavorite,
@@ -170,9 +158,6 @@ fun PlayerScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
             )
         },
     ) { innerPadding ->
@@ -226,22 +211,21 @@ private fun PlayerContent(
     onChartBreakdownSelected: (ChartBreakdown) -> Unit,
     onShipClick: (ShipPerformance, BattleMode) -> Unit,
 ) {
-    val listState = rememberLazyListState()
     val mode = state.activeMode
     val stats = mode?.let(report::stats)
-    val hasCharts = mode != null && (
-        report.dailyStats(mode).size > 1 ||
-            report.categories(ChartBreakdown.SHIP_TYPE, mode).isNotEmpty() ||
-            report.categories(ChartBreakdown.TIER, mode).isNotEmpty()
-        )
+    // Sorting is locale-aware, so it is done once per input instead of on every
+    // recomposition of the list.
+    val sortedShips = remember(report.ships, mode, state.sort) {
+        if (mode == null) emptyList() else report.ships.ranked(mode, state.sort)
+    }
 
+    // The ship rows are list items of their own, so spacing is an explicit
+    // bottom padding on each section rather than the list's arrangement.
     LazyColumn(
-        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item(key = "header") {
+        sectionItem(key = "header") {
             PlayerHeaderCard(
                 account = report.account,
                 server = state.server,
@@ -251,7 +235,7 @@ private fun PlayerContent(
 
         if (mode != null && stats != null) {
             if (report.modes.size > 1) {
-                item(key = "mode") {
+                sectionItem(key = "mode") {
                     BattleModePicker(
                         modes = report.modes,
                         selection = mode,
@@ -259,11 +243,11 @@ private fun PlayerContent(
                     )
                 }
             }
-            item(key = "stats") {
+            sectionItem(key = "stats") {
                 StatsSections(stats = stats, records = report.records(mode))
             }
-            if (hasCharts) {
-                item(key = "charts") {
+            if (report.hasTrend(mode) || report.hasBreakdown(mode)) {
+                sectionItem(key = "charts") {
                     PlayerChartsSection(
                         report = report,
                         mode = mode,
@@ -274,20 +258,30 @@ private fun PlayerContent(
                     )
                 }
             }
-            item(key = "ships") {
-                ShipsSection(
-                    ships = report.ships,
-                    mode = mode,
-                    sort = state.sort,
-                    onSortSelected = onSortSelected,
-                    onShipClick = { ship -> onShipClick(ship, mode) },
-                )
-            }
+            shipsSection(
+                ships = sortedShips,
+                mode = mode,
+                sort = state.sort,
+                onSortSelected = onSortSelected,
+                onShipClick = { ship -> onShipClick(ship, mode) },
+            )
         } else {
             item(key = "hidden") {
                 HiddenProfileCard()
             }
         }
+    }
+}
+
+private val SectionSpacing = 16.dp
+
+private fun LazyListScope.sectionItem(
+    key: String,
+    spacing: Dp = SectionSpacing,
+    content: @Composable () -> Unit,
+) {
+    item(key = key) {
+        Box(Modifier.padding(bottom = spacing)) { content() }
     }
 }
 
@@ -437,17 +431,18 @@ private fun BattleModePicker(
     }
 }
 
-@Composable
-private fun ShipsSection(
+/**
+ * The ship list. Rows are lazy items, so a player with hundreds of ships only
+ * composes the rows on screen; together they are drawn as one rounded card.
+ */
+private fun LazyListScope.shipsSection(
     ships: List<ShipPerformance>,
     mode: BattleMode,
     sort: ShipSort,
     onSortSelected: (ShipSort) -> Unit,
     onShipClick: (ShipPerformance) -> Unit,
 ) {
-    val sorted = remember(ships, mode, sort) { ships.ranked(mode, sort) }
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    sectionItem(key = "ships-header", spacing = 10.dp) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -456,17 +451,19 @@ private fun ShipsSection(
             Text(
                 text = stringResource(
                     R.string.player_ships_title,
-                    StatFormat.integer(sorted.size),
+                    StatFormat.integer(ships.size),
                 ),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
-            if (sorted.isNotEmpty()) {
+            if (ships.isNotEmpty()) {
                 SortMenu(sort = sort, onSelect = onSortSelected)
             }
         }
+    }
 
-        if (sorted.isEmpty()) {
+    if (ships.isEmpty()) {
+        item(key = "ships-empty") {
             SectionCard {
                 Text(
                     text = stringResource(R.string.player_ships_empty),
@@ -474,27 +471,41 @@ private fun ShipsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        } else {
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-            ) {
-                Column {
-                    sorted.forEachIndexed { index, ship ->
-                        ShipRow(
-                            performance = ship,
-                            mode = mode,
-                            sort = sort,
-                            onClick = { onShipClick(ship) },
-                        )
-                        if (index != sorted.lastIndex) {
-                            HorizontalDivider(modifier = Modifier.padding(start = 54.dp))
-                        }
-                    }
+        }
+        return
+    }
+
+    itemsIndexed(ships, key = { _, ship -> ship.id }) { index, ship ->
+        val isLast = index == ships.lastIndex
+        Surface(
+            shape = stackedItemShape(isFirst = index == 0, isLast = isLast),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Column {
+                ShipRow(
+                    performance = ship,
+                    mode = mode,
+                    sort = sort,
+                    onClick = { onShipClick(ship) },
+                )
+                if (!isLast) {
+                    HorizontalDivider(modifier = Modifier.padding(start = 54.dp))
                 }
             }
         }
     }
+}
+
+/** The corners of one row in a vertical stack that reads as a single rounded card. */
+@Composable
+private fun stackedItemShape(isFirst: Boolean, isLast: Boolean): Shape {
+    val card = MaterialTheme.shapes.large
+    return card.copy(
+        topStart = if (isFirst) card.topStart else ZeroCornerSize,
+        topEnd = if (isFirst) card.topEnd else ZeroCornerSize,
+        bottomStart = if (isLast) card.bottomStart else ZeroCornerSize,
+        bottomEnd = if (isLast) card.bottomEnd else ZeroCornerSize,
+    )
 }
 
 @Composable

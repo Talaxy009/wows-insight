@@ -11,9 +11,14 @@ data class FavoritePlayer(
     val nickname: String,
     val server: GameServer,
 ) {
-    val id: String get() = "${server.apiValue}-$accountId"
+    val id: String get() = idOf(server, accountId)
 
     val summary: PlayerSummary get() = PlayerSummary(accountId, nickname)
+
+    companion object {
+        /** The identity of a saved player: the same account ID can exist on several realms. */
+        fun idOf(server: GameServer, accountId: Long): String = "${server.apiValue}-$accountId"
+    }
 }
 
 /**

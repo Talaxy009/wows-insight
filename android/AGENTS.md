@@ -24,6 +24,7 @@ android/
 ├── AGENTS.md
 ├── app/src/main/java/com/talaxy/wowsinsight/
 │   ├── AppContainer.kt / MainActivity.kt / WoWsInsightApplication.kt
+│   ├── util/              // runCatchingCancellable 等与层无关的小工具
 │   ├── data/
 │   │   ├── model/         // 领域模型、64 位 ID、评分档位、收藏模型
 │   │   ├── remote/        // OkHttp 客户端、DTO 与映射
@@ -56,7 +57,8 @@ android/
 - **搜索**：`SearchViewModel` 用 `combine(query, server, retryToken)` + `distinctUntilChanged()`
   + `flatMapLatest`，实现 350ms 防抖和「旧请求自动取消」；输入不足 3 个字符直接回到 Idle。
 - **取消**：`YuyukoApi` 用 `suspendCancellableCoroutine` 包 OkHttp，协程取消会 cancel 底层
-  `Call`；捕获异常时先重新抛出 `CancellationException`，不要把取消显示成错误。
+  `Call`；协程里要捕获失败时用 `util/Coroutines.kt` 的 `runCatchingCancellable`（不会吞掉
+  `CancellationException`），不要手写 try/catch，更不要直接用 `runCatching`。
 - **错误**：`ApiException` 区分 HTTP / 信封 code / 网络 / 解码；UI 把异常转成 `UiText`
   后显示，`UiText` 用字符串资源 id，不要在 ViewModel 里拼死字符串。
 - **导航**：`ui/navigation/Routes.kt` 使用 `@Serializable` 类型安全路由（`SearchRoute` /
@@ -79,6 +81,13 @@ android/
   `EndAlignedDropdownMenu`：它把菜单放进 `Box(Modifier.align(Alignment.BottomEnd))`，这个零尺寸
   锚点位于父 `Box`（按钮）右下角，M3 的定位器发现左对齐会超出窗口后会自动退到“菜单右边缘贴锚点
   右边缘”，不需要用 `offset` 猜菜单宽度。新增这类菜单直接用这个组件，不要再手写那一层 Box。
+- **二级页顶栏**：玩家页、单舰页、关于页统一用 `BackTopAppBar(title, onBack, actions)`，不要再各写一遍
+  `TopAppBar` + 返回箭头。
+- **玩家行**：搜索结果行（`PlayerRowCard`）和收藏行共用 `PlayerIdentity`（昵称 + 「服务器 · ID」）和
+  `PlayerRowTrailing`（收藏星 + 箭头）；收藏的身份比较统一用 `FavoritePlayer.idOf(server, accountId)`。
+- **玩家页列表**：战舰行是 `LazyColumn` 的独立 item（几百艘舰只组合屏幕内的行），圆角卡片效果由
+  `stackedItemShape` 按首 / 尾行切角拼成；所以这个 `LazyColumn` 不用 `spacedBy`，各区块的间距是
+  `sectionItem` 给的底部 padding。排序放在 `remember` 里，不要在 item 构建里排序。
 - **可复用的行级组件**：玩家行的次要行统一用 `serverAccountLabel(server, accountId)`（「亚服 · ID …」），
   收藏星统一用 `FavoriteStarButton`（已选时 `Filled.Star` + tertiary 色），列表分组标题统一用
   `ListHeader(title, count)`，菜单里标记当前项的行统一用 `SelectedMenuItem`。新增同类界面直接拼这些
@@ -92,6 +101,8 @@ android/
   与 iOS 的 `.abbreviated` 对齐，别换成 `SHORT`（中文会退化成「2016/10/21」、英文变「10/21/16」）。
   这个日期比纯数字宽，战舰列表行内副标题（舰种 · 日期 · 胜率，按「最近战斗」排序时）一行放不下，
   所以那里是 `maxLines = 2` 换行而不是省略号——写成 `maxLines = 1` 会把胜率截掉。
+- **趋势图窗口**：`PlayerReport.trendDays` 只保留轴窗口（最后一条记录往前七天）内的天，趋势卡是否
+  出现（`hasTrend`）按过滤后的条数 `> 1` 判断，和 iOS 的 `plottedDays` 一致。
 - **趋势图横坐标**：接口的每日记录最多一周，所以 `TrendChart` 的 x 轴固定是「最后一条记录往前
   七天」，不是「有战斗的那几天」：日期刻度落在 1 / 3 / 5 / 7 天，空隙在右侧出现在最后一天没
   战斗时也不会让刻度跳位。为此它同时接 `days`（当前类型有战斗的天，用来画点）和 `window`
@@ -118,39 +129,18 @@ android/
 
 ## 收藏
 
-- 存储：Preferences DataStore，键 `favorites.players`，值是 `List<FavoritePlayer>` 的 JSON
-  数组；导出时才包成带 `version` / `exportedAt` 的信封。
-- 读改写通过 `Mutex` 串行化；解析失败回退空列表，不崩。
-- 导入 / 导出用 SAF（`FavoritesFileService`），格式见根 [AGENTS.md](../AGENTS.md#收藏文件)；
-  读取上限 2 MiB，导出用 `wt` 覆盖写，不需要存储权限。
-- 导入是追加合并：同 `(accountId, server)` 跳过，保留本地顺序，永远不删除本地收藏。
-- 收藏排序由用户在 UI 拖动；无障碍的「上移 / 下移」走 `moveBy`，和拖动共用同一套顺序逻辑。
-- 改动格式时同步更新 `FavoritesArchiveTest`、iOS 的 `FavoritesArchive.swift` 和根文档；
-  完整清单见 [`.agents/skills/wows-favorites-archive/SKILL.md`](../.agents/skills/wows-favorites-archive/SKILL.md)。
+- Preferences DataStore 键 `favorites.players` 存 `List<FavoritePlayer>` 的 JSON 数组，读改写用
+  `Mutex` 串行化；导入 / 导出走 SAF（`FavoritesFileService`）。
+- 无障碍的「上移 / 下移」走 `moveBy`，和拖动共用同一套顺序逻辑。
+- 格式与导入语义见根 [AGENTS.md](../AGENTS.md#收藏文件)，改动清单见
+  [`wows-favorites-archive`](../.agents/skills/wows-favorites-archive/SKILL.md)。
 
 ## 多语言与字符串资源
 
-iOS 的 `Localizable.xcstrings` 是唯一文案源，Android 的 `values*/strings.xml` 全部由
-`.agents/skills/wows-localization/scripts/generate_strings.py` 生成。在**仓库根目录**运行：
-
-```sh
-python .agents/skills/wows-localization/scripts/generate_strings.py
-```
-
-- 脚本读取 `ios/WoWsInsight/Localizable.xcstrings`，写出 `android/app/src/main/res/` 下的
-  `values` / `values-zh-rCN` / `values-zh-rTW` / `values-ja` / `values-ko`；`app.title` 生成
-  App 名称 `app_title`。
-- 语义 key 转成下划线形式（`player.stats.winRate` → `player_stats_win_rate`），Foundation
-  的 `%1$@` / `%ld` 等占位符转成 Android 的 `%1$s` / `%d`；撇号会转义成 `\'`。
-- Android 独有的无障碍 / 平台文案放在脚本顶部的 `EXTRA` 字典里；与 catalog 重名时脚本会报错。
-- **不要手改生成的 `strings.xml`**；改文案先改 iOS catalog，再跑脚本。
-- 新增语言时在脚本的 `LOCALES` 里加映射，并确认 `app/src/main/res/xml/locales_config.xml`
-  和 `AndroidManifest.xml` 的 `localeConfig` 已覆盖该语言。
-- 舰名规则由 `data/model/ShipNameLanguage.kt` 跟随系统语言，和 iOS 保持一致：
-  简繁中文用 `nameCn`，英语用 `nameEnglish`，日语 / 韩语回退 `nameEnglish`，其他语言跟随
-  界面回退；国服（`cn`）优先 `nameCn360`。
-- 新增文案 / 语言的完整跨平台步骤见
-  [`.agents/skills/wows-localization/SKILL.md`](../.agents/skills/wows-localization/SKILL.md)。
+`values*/strings.xml` 全部由 `.agents/skills/wows-localization/scripts/generate_strings.py`
+从 iOS 的 `Localizable.xcstrings` 生成，**不要手改**；Android 独有文案放脚本的 `EXTRA` 字典。
+舰名规则在 `data/model/ShipNameLanguage.kt`，与 iOS 一致。完整流程见
+[`wows-localization`](../.agents/skills/wows-localization/SKILL.md)。
 
 ## 构建与验证
 
@@ -160,7 +150,7 @@ cd android
 # Debug APK
 ./gradlew :app:assembleDebug
 
-# 单元测试（当前 29 个）
+# 单元测试（当前 40 个）
 ./gradlew :app:testDebugUnitTest
 
 # lint（有 error 会失败）
@@ -201,31 +191,13 @@ adb shell am start -n com.talaxy.wowsinsight/.ui.preview.ChartPreviewActivity
 
 ## 版本号与发布
 
-- 版本号来自仓库根目录的 [`version.xcconfig`](../version.xcconfig)（与 iOS 共用）：
-  `app/build.gradle.kts` 读取 `VERSION_NAME` / `VERSION_CODE` 作为 `versionName` /
-  `versionCode` 的默认值。仍可用 Gradle 属性覆盖：`-PversionName=1.2.0 -PversionCode=42`
-  （CI 发布时就是这样注入的）。
-- 发布由根目录的[发布工作流](../.github/workflows/release.yml)手动触发，Android job 会：
-  从 secrets 解码 keystore，用 `setup-java`（Temurin 21）+ `./gradlew :app:assembleRelease`
-  构建签名包，执行 `apksigner verify` 后把产物重命名为 `WoWsInsight-<version>.apk` 并上传。
-- 签名配置在 `app/build.gradle.kts`，读取顺序是环境变量（CI）优先，其次是
-  `android/keystore.properties`（本地日常打包）。properties 模板是
-  `keystore.properties.example`，`cp keystore.properties.example keystore.properties` 后填
-  `storeFile` / `storePassword` / `keyAlias` / `keyPassword`，再直接
-  `./gradlew :app:assembleRelease`；`storeFile` 相对 `android/` 解析（也可写绝对路径）。
-  四个值都不存在时构建出未签名包，CI 会在构建前检查并直接失败。
-- 首次发布前生成一次 keystore 并妥善备份：同一个包名的后续更新必须用同一份 keystore，
-  丢失后无法覆盖安装。keystore 和密码不要提交仓库，`.gitignore` 已忽略 `*.jks` /
-  `*.keystore` / `keystore.properties`。
-- CI 使用四个 repository secrets：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、
-  `ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。`ANDROID_KEYSTORE_BASE64` 是 keystore 文件的
-  base64，不含换行也可以。keystore 和密码不能提交仓库。
-- `versionName` 使用发布输入（留空时取 `version.xcconfig` 的 `VERSION_NAME`），`versionCode`
-  使用 workflow 的 run number。两个平台共用一份 `version.xcconfig`、一个版本号和同一个 Release。
-- 发布前必须验证签名：未签名的 APK 不能进入 Release。
-- 发布需要仓库开启 Actions 的 **Read and write permissions**（见根 AGENTS.md）。
-- 发布 / 版本号 / 签名的完整检查清单见
-  [`.agents/skills/wows-release/SKILL.md`](../.agents/skills/wows-release/SKILL.md)。
+- `versionName` / `versionCode` 默认读根目录 [`version.xcconfig`](../version.xcconfig)，可用
+  `-PversionName=1.2.0 -PversionCode=42` 覆盖（CI 就是这样注入的）。
+- 签名配置在 `app/build.gradle.kts`：环境变量（CI）优先，其次 `android/keystore.properties`
+  （模板 `keystore.properties.example`，`storeFile` 相对 `android/` 解析）；都没有时产出未签名包。
+- 同一包名的后续更新必须用同一份 keystore；keystore 和密码不能提交仓库。
+
+secrets、CI 步骤和发布检查清单见 [`wows-release`](../.agents/skills/wows-release/SKILL.md)。
 
 ## 已知约定 / 限制
 

@@ -1,5 +1,6 @@
 package com.talaxy.wowsinsight.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Star
@@ -35,11 +38,14 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +63,37 @@ import com.talaxy.wowsinsight.ui.util.StatFormat
 import com.talaxy.wowsinsight.ui.util.labelRes
 import com.talaxy.wowsinsight.ui.util.resolve
 import com.talaxy.wowsinsight.ui.util.UiText
+
+/** The app bar of every page below the home screen: a title and a back arrow. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BackTopAppBar(
+    title: String,
+    onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.common_back),
+                )
+            }
+        },
+        actions = actions,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    )
+}
 
 @Composable
 fun SectionCard(
@@ -191,7 +228,7 @@ fun RatingBadge(
     rating: PlayerRating,
     modifier: Modifier = Modifier,
 ) {
-    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val dark = isSystemInDarkTheme()
     val color = ratingColor(rating.tier, dark)
     Surface(
         modifier = modifier,
@@ -321,6 +358,54 @@ fun InfoRow(
     }
 }
 
+/** The nickname with its "server · ID" line, shared by every player row. */
+@Composable
+fun PlayerIdentity(
+    nickname: String,
+    server: GameServer,
+    accountId: Long,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = nickname,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = serverAccountLabel(server, accountId),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** The favorite star and the disclosure chevron at the end of a player row. */
+@Composable
+fun RowScope.PlayerRowTrailing(
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+) {
+    FavoriteStarButton(
+        selected = isFavorite,
+        addLabel = stringResource(R.string.search_favorite_add),
+        removeLabel = stringResource(R.string.search_favorite_remove),
+        onClick = onToggleFavorite,
+    )
+    Icon(
+        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.width(8.dp))
+}
+
 @Composable
 fun PlayerRowCard(
     player: PlayerSummary,
@@ -343,36 +428,13 @@ fun PlayerRowCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(
+            PlayerIdentity(
+                nickname = player.nickname,
+                server = server,
+                accountId = player.accountId,
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = player.nickname,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = serverAccountLabel(server, player.accountId),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            FavoriteStarButton(
-                selected = isFavorite,
-                addLabel = stringResource(R.string.search_favorite_add),
-                removeLabel = stringResource(R.string.search_favorite_remove),
-                onClick = onToggleFavorite,
             )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.width(8.dp))
+            PlayerRowTrailing(isFavorite = isFavorite, onToggleFavorite = onToggleFavorite)
         }
     }
 }
@@ -482,7 +544,7 @@ fun EmptySearchState(
 @Composable
 fun ShipMetaText(
     tierLabel: String,
-    typeRes: Int,
+    @StringRes typeRes: Int,
     nation: ShipNation,
     modifier: Modifier = Modifier,
 ) {

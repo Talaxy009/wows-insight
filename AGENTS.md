@@ -19,30 +19,12 @@ Yuyuko 公共接口、统计口径和收藏文件格式。平台自己的实现�
 
 ```txt
 .
-├── ios/                        # 原生 iOS 客户端
-│   ├── README.md               # 用户视角：运行、构建、已知限制
-│   ├── AGENTS.md               # 开发者视角：结构、实现要点、调试
-│   ├── WoWsInsight.xcodeproj
-│   └── WoWsInsight/
-├── android/                    # 原生 Android 客户端
-│   ├── README.md
-│   ├── AGENTS.md
-│   └── app/
-├── docs/
-│   └── icon.svg                # 两个平台共用的应用图标源文件
-├── version.xcconfig            # 两个平台共用的版本号（iOS / Android / 发布工作流都读它）
-├── .agents/
-│   └── skills/                 # 可复用流程：多语言、应用图标、收藏格式、发布、接口口径
-│       ├── wows-localization/SKILL.md
-│       ├── wows-app-icon/SKILL.md
-│       ├── wows-favorites-archive/SKILL.md
-│       ├── wows-release/SKILL.md
-│       └── wows-yuyuko-api/SKILL.md
-├── .github/
-│   └── workflows/
-│       └── release.yml         # 手动触发：打包已签名 APK + 未签名 IPA 并发布
-├── README.md                   # 仓库总览与两个平台共用的用户说明
-└── AGENTS.md                   # 本文件
+├── ios/                 # iOS 客户端（README.md / AGENTS.md / Xcode 工程）
+├── android/             # Android 客户端（README.md / AGENTS.md / Gradle 工程）
+├── docs/icon.svg        # 两个平台共用的应用图标源文件
+├── version.xcconfig     # 两个平台共用的版本号
+├── .agents/skills/      # 跨平台流程：多语言、应用图标、收藏格式、发布、接口口径
+└── .github/workflows/release.yml  # 手动触发的发布（签名 APK + 未签名 IPA）
 ```
 
 ## 数据来源
@@ -132,7 +114,7 @@ rating = 700 × nDmg + 300 × nFrags + 150 × nWins   // 0 ~ 9999
 - `exportedAt` 截断到整秒：Foundation 的 `.iso8601` 解码器不接受小数秒。
 - 导入语义是「追加合并」：已存在（同 `accountId` + 同 `server`）的条目跳过，新的追加到末尾，
   保留本机现有顺序，**导入永远不能删除本地收藏**。
-- 只认这个格式本身，不保留旧格式 / 裸数组的兼容解析；读不懂就提示导入失败。
+- 只认这个格式本身，不保留旧格式 / 裸数组的兼容解析；读不懂或 `version` 不是 `1` 就提示导入失败（两端都校验）。
 - iOS 存在 `UserDefaults`，Android 存在 Preferences DataStore 的 `favorites.players` 键。
 - 修改格式时必须同时改两端、Android 的 `FavoritesArchiveTest` / iOS 的导入导出逻辑，以及
   [`.agents/skills/wows-favorites-archive/SKILL.md`](./.agents/skills/wows-favorites-archive/SKILL.md)。
@@ -163,56 +145,23 @@ iOS 的 `Localizable.xcstrings` 是所有用户可见文案的唯一来源，And
 
 ## 发布
 
-[`.github/workflows/release.yml`](./.github/workflows/release.yml) 是**手动触发**的
-（Actions → Release → Run workflow），一次构建两个平台，并发布到同一个 GitHub Release：
+[`release.yml`](./.github/workflows/release.yml) 手动触发（Actions → Release → Run workflow），
+一次构建两个平台并发布到同一个 GitHub Release：
 
-- 两个平台共用的版本号只写在仓库根目录的 [`version.xcconfig`](./version.xcconfig)：
-  `VERSION_NAME` 是市场版本号，`VERSION_CODE` 是本地构建的构建号；iOS 通过 target 的
-  base configuration 把它们映射成 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`，
-  Android 的 `app/build.gradle.kts` 直接读取同一文件。发版时只改这一处。
-- `version` 输入是发布版本号（可带 `v` 前缀），例如 `1.0.1` → 标签 `v1.0.1`。留空时使用
-  `version.xcconfig` 的 `VERSION_NAME`；输入了则以输入为准（临时发版不用改文件）。
-- `versionCode` / `CURRENT_PROJECT_VERSION` 在 CI 统一使用 workflow 的 run number；
-  本地构建使用 `version.xcconfig` 的 `VERSION_CODE`。
-- 标签已存在会直接报错，需要换一个版本号。
-- 产物是 `WoWsInsight-<version>.ipa` 和 `WoWsInsight-<version>.apk`；iOS IPA **不签名**，
-  需要使用者自己重签，Android APK 由 CI 用仓库里配置的 keystore **签名后发布**。
-  两个文件同时上传成 Actions artifact。Release 说明由「如何安装」+ `--generate-notes` 的
-  变更日志组成。
-- Android 签名需要四个 repository secrets：`ANDROID_KEYSTORE_BASE64`、
-  `ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`；缺失时 Android
-  job 会直接失败，不会产出未签名包。本地把同样的信息填进 `android/keystore.properties`
-  （模板 `keystore.properties.example`，已被 gitignore）后直接 `assembleRelease` 即可签名；
-  CI 通过环境变量注入，优先级高于 properties。
-- 发布需要仓库在 Settings → Actions → General → Workflow permissions 里允许
-  **Read and write permissions**，否则 `gh release create` 会因为没有写权限失败。
+- 版本号唯一来源是根目录的 [`version.xcconfig`](./version.xcconfig)（`VERSION_NAME` /
+  `VERSION_CODE`），发版只改这一处；workflow 的 `version` 输入可临时覆盖，CI 的构建号用 run number。
+- 产物：`WoWsInsight-<version>.ipa`（**不签名**）和 `WoWsInsight-<version>.apk`（CI 用 repository
+  secrets 里的 keystore **签名**，缺 secrets 时直接失败）。
 
-iOS 的镜像/签名注意事项见 [ios/AGENTS.md](./ios/AGENTS.md)，Android 的版本覆盖和产物路径
-见 [android/AGENTS.md](./android/AGENTS.md)；发布 / 签名 / 版本号的完整检查清单见
-[`.agents/skills/wows-release/SKILL.md`](./.agents/skills/wows-release/SKILL.md)。
+版本规则、签名 secrets、权限要求和发布检查清单见
+[`wows-release`](./.agents/skills/wows-release/SKILL.md)；平台细节见 [ios/AGENTS.md](./ios/AGENTS.md#发布)
+和 [android/AGENTS.md](./android/AGENTS.md#版本号与发布)。
 
 ## 文档维护
 
-文档按平台拆分，避免两个平台的内容互相污染：
-
-- 根 `README.md`：只放仓库总览、平台索引、两个平台共用的功能 / 评分 / 限制 / 声明。
-  不写某一平台的构建命令或界面细节。
-- `ios/README.md`、`android/README.md`：用户视角的平台文档（运行、构建、发布、平台限制）。
-- 根 `AGENTS.md`：共享接口口径、收藏格式、发布流程、文档规则。
-- `ios/AGENTS.md`、`android/AGENTS.md`：该平台的实现细节、代码约定、调试方法。
-- `docs/`：两个平台共用的素材，目前只有应用图标源文件 `docs/icon.svg`（根 README 的
-  Logo 也引用它）；平台专属的素材仍然放在对应平台目录里。
-- `.agents/skills/<name>/SKILL.md`：跨平台的多步流程（目前有 `wows-localization`、
-  `wows-app-icon`、`wows-favorites-archive`、`wows-release`、`wows-yuyuko-api`），配套脚本放在
-  同名目录的 `scripts/` 下。写流程而不是重复平台细节，平台细节仍然放在对应的 `AGENTS.md`。
-
-改动用户可见行为时，同时更新对应平台的 `README.md`；改动实现约定时更新对应的
-`AGENTS.md`；改动接口、收藏格式或多语言流程时同时检查相关 skill。新增平台时创建
-`<platform>/README.md` 和 `<platform>/AGENTS.md`，在根 README 的平台表和本文件的文档索引里
-登记，并在发布工作流里增加对应 job 与产物。
-
-## 后续可扩展方向
-
-- 收藏分组、按名称 / 评分自动排序
-- 排位赛季与成就
-- 两个平台之间的界面 / 功能差异持续收敛
+- 根 `README.md`：仓库总览、共用功能 / 评分 / 限制 / 声明，不写平台构建命令。
+- `<platform>/README.md`：平台用户文档（运行、构建、平台特有交互与限制）。
+- 根 `AGENTS.md`：共享接口口径、收藏格式、发布概要；`<platform>/AGENTS.md`：平台实现约定与调试。
+- `.agents/skills/<name>/SKILL.md`：跨平台多步流程，脚本放同名目录的 `scripts/`。
+- 同一事实只写在一处，其他地方用链接引用。改用户可见行为更新对应 README，改实现约定更新对应
+  AGENTS.md，改接口 / 收藏格式 / 多语言流程时同步相关 skill。

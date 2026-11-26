@@ -61,37 +61,22 @@ class DataStoreFavoritesRepository(
 
     override suspend fun toggle(player: PlayerSummary, server: GameServer) {
         update { players ->
-            val index = players.indexOfFirst {
-                it.accountId == player.accountId && it.server == server
-            }
+            val index = players.indexOfId(FavoritePlayer.idOf(server, player.accountId))
             if (index >= 0) {
                 players.removeAt(index)
             } else {
-                players.add(
-                    0,
-                    FavoritePlayer(
-                        accountId = player.accountId,
-                        nickname = player.nickname,
-                        server = server,
-                    ),
-                )
+                players.add(0, FavoritePlayer(player.accountId, player.nickname, server))
             }
         }
     }
 
     override suspend fun remove(favorite: FavoritePlayer) {
-        update { players ->
-            players.removeAll {
-                it.accountId == favorite.accountId && it.server == favorite.server
-            }
-        }
+        update { players -> players.removeAll { it.id == favorite.id } }
     }
 
     override suspend fun updateNickname(player: PlayerSummary, server: GameServer) {
         update { players ->
-            val index = players.indexOfFirst {
-                it.accountId == player.accountId && it.server == server
-            }
+            val index = players.indexOfId(FavoritePlayer.idOf(server, player.accountId))
             if (index >= 0 && players[index].nickname != player.nickname) {
                 players[index] = players[index].copy(nickname = player.nickname)
             }
@@ -109,11 +94,10 @@ class DataStoreFavoritesRepository(
 
     override suspend fun moveBy(favorite: FavoritePlayer, delta: Int) {
         update { players ->
-            val index = players.indexOfFirst { it.id == favorite.id }
+            val index = players.indexOfId(favorite.id)
             val target = index + delta
             if (index < 0 || target !in players.indices) return@update
-            val item = players.removeAt(index)
-            players.add(target, item)
+            players.add(target, players.removeAt(index))
         }
     }
 
@@ -126,10 +110,7 @@ class DataStoreFavoritesRepository(
         var skipped = 0
         update { current ->
             for (player in players) {
-                val exists = current.any {
-                    it.accountId == player.accountId && it.server == player.server
-                }
-                if (exists) {
+                if (current.indexOfId(player.id) >= 0) {
                     skipped += 1
                 } else {
                     current.add(player)
@@ -156,6 +137,8 @@ class DataStoreFavoritesRepository(
         if (raw.isNullOrBlank()) return emptyList()
         return runCatching { json.decodeFromString(serializer, raw) }.getOrDefault(emptyList())
     }
+
+    private fun MutableList<FavoritePlayer>.indexOfId(id: String): Int = indexOfFirst { it.id == id }
 
     private companion object {
         val STORAGE_KEY = stringPreferencesKey("favorites.players")

@@ -26,7 +26,13 @@ struct FavoritesArchive: Codable, Sendable {
     static func decode(from data: Data) throws -> FavoritesArchive {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(FavoritesArchive.self, from: data)
+        let archive = try decoder.decode(FavoritesArchive.self, from: data)
+        // The Android app rejects other versions too; a file this app cannot
+        // read must fail instead of being half-understood.
+        guard archive.version == currentVersion else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return archive
     }
 }
 

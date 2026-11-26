@@ -95,6 +95,23 @@ data class PlayerReport(
         categoriesByMode[breakdown].orEmpty()[forMode].orEmpty()
 
     /**
+     * The days of [forMode] inside the trend axis, which spans [TREND_AXIS_DAYS]
+     * days ending on the newest recorded day. The service can keep older
+     * snapshots, and those are not drawn.
+     */
+    fun trendDays(forMode: BattleMode): List<DailyStats> {
+        val axisStart = dailyStats.lastOrNull()?.day?.minusDays(TREND_AXIS_DAYS - 1)
+            ?: return emptyList()
+        return dailyStats(forMode).filter { !it.day.isBefore(axisStart) }
+    }
+
+    /** One recorded day is a number, not a trend, so the trend card needs two. */
+    fun hasTrend(forMode: BattleMode): Boolean = trendDays(forMode).size > 1
+
+    fun hasBreakdown(forMode: BattleMode): Boolean =
+        ChartBreakdown.entries.any { categories(it, forMode).isNotEmpty() }
+
+    /**
      * The player page asks for these lists on every recomposition (scrolling the
      * ship list rebuilds it), so filtering and locale-aware sorting happen once
      * per mode instead of per frame.
@@ -127,6 +144,9 @@ data class PlayerReport(
     }
 
     companion object {
+        /** The service keeps the last week, so the trend axis always spans seven days. */
+        const val TREND_AXIS_DAYS = 7L
+
         fun create(
             overview: AccountOverview,
             shipStats: List<ShipStat>,
